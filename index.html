@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>FORGE — Workout Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;900&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0c; --surface: #141418; --surface2: #1e1e24; --surface3: #28282f;
+    --border: #2e2e38; --accent: #6b8fd4; --accent-dark: #0a0a0c; --red: #e84848; --green: #3adf8a;
+    --blue: #6b8fd4; --purple: #9b6cff;
+    --text: #f0f0f4; --text2: #9090a0; --text3: #5a5a70;
+    --input-bg: #ffffff; --input-text: #1a1a2e; --input-border: #c5d0e8;
+    --radius: 14px; --safe-bottom: env(safe-area-inset-bottom, 20px);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body { font-family: 'Barlow', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; max-width: 430px; margin: 0 auto; overflow-x: hidden; }
+  .nav-bar { display: flex; justify-content: space-around; position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 430px; background: rgba(10,10,12,0.96); backdrop-filter: blur(16px); border-top: 1px solid var(--border); padding-bottom: var(--safe-bottom); z-index: 100; }
+  .nav-btn { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 12px 0 10px; border: none; background: none; color: var(--text3); font-family: 'Barlow Condensed', sans-serif; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; transition: color 0.15s; }
+  .nav-btn.active { color: var(--accent); }
+  .nav-icon { font-size: 20px; line-height: 1; }
+  .page-header { padding: 52px 20px 12px; }
+  .page-title { font-family: 'Barlow Condensed', sans-serif; font-size: 36px; font-weight: 900; letter-spacing: -0.02em; line-height: 1; text-transform: uppercase; }
+  .page-title span { color: var(--accent); }
+  .screen { display: none; padding-bottom: calc(72px + var(--safe-bottom)); min-height: 100vh; }
+  .screen.active { display: block; }
+  .section-label { font-family: 'Barlow Condensed', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text3); padding: 10px 20px 6px; }
+  .divider { height: 1px; background: var(--border); margin: 10px 16px; }
+  .type-tabs { display: flex; gap: 8px; padding: 4px 16px 10px; }
+  .type-tab { flex: 1; padding: 10px 6px; border: 1.5px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--text2); font-family: 'Barlow Condensed', sans-serif; font-size: 14px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; cursor: pointer; text-align: center; transition: all 0.15s; }
+  .type-tab.active { background: var(--accent); color: #ffffff; border-color: var(--accent); }
+  .input-group { margin-bottom: 12px; }
+  .input-label { font-family: 'Barlow Condensed', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text3); margin-bottom: 5px; }
+  input, select, textarea { width: 100%; background: var(--input-bg); border: 1.5px solid var(--input-border); border-radius: 10px; color: var(--input-text); font-family: 'Barlow', sans-serif; font-size: 16px; padding: 11px 14px; outline: none; appearance: none; -webkit-appearance: none; transition: border-color 0.15s; }
+  input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+  input::placeholder, textarea::placeholder { color: #8899bb; }
+  .input-row { display: flex; gap: 8px; }
+  .input-row .input-group { flex: 1; }
+  .ac-wrapper { position: relative; }
+  .ac-dropdown { position: absolute; top: 100%; left: 0; right: 0; z-index: 200; background: var(--surface3); border: 1.5px solid var(--accent); border-radius: 10px; margin-top: 3px; max-height: 180px; overflow-y: auto; box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
+  .ac-item { padding: 11px 14px; font-family: 'Barlow', sans-serif; font-size: 15px; color: var(--text); cursor: pointer; border-bottom: 1px solid var(--border); }
+  .ac-item:last-child { border-bottom: none; }
+  .ac-item:active { background: var(--surface2); }
+  @keyframes slideIn { from { opacity:0; transform:translateY(-5px); } to { opacity:1; transform:translateY(0); } }
+  .set-num { font-family: 'Barlow Condensed', sans-serif; font-size: 17px; font-weight: 900; color: var(--accent); text-align: center; }
+  .set-row input { padding: 8px 6px; font-size: 15px; text-align: center; border-radius: 8px; background: var(--input-bg); border-color: var(--input-border); color: var(--input-text); }
+  .set-del { background: none; border: none; color: var(--red); font-size: 20px; cursor: pointer; text-align: center; padding: 4px; opacity: 0.65; }
+  .set-del:active { opacity: 1; }
+  .set-row { display: flex; gap: 5px; align-items: center; margin-bottom: 6px; animation: slideIn 0.18s ease; }
+  .set-mode-pills { display: flex; gap: 4px; margin-bottom: 5px; }
+  .set-mode-pill { flex: 1; padding: 5px 4px; border: 1.5px solid var(--border); border-radius: 8px; background: var(--surface2); color: var(--text3); font-family: 'Barlow Condensed', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; cursor: pointer; text-align: center; transition: all 0.12s; }
+  .set-mode-pill.active { background: rgba(107,143,212,0.2); color: var(--accent); border-color: var(--accent); }
+  .bw-tag { display: flex; align-items: center; justify-content: center; background: var(--surface3); border: 1.5px solid var(--border); border-radius: 8px; font-family: 'Barlow Condensed', sans-serif; font-size: 12px; font-weight: 700; color: var(--text2); padding: 8px 4px; letter-spacing: 0.03em; }
+  .exercise-block { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin: 0 16px 10px; overflow: visible; animation: slideIn 0.22s ease; }
+  .exercise-block-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; background: var(--surface2); border-radius: var(--radius) var(--radius) 0 0; }
+  .exercise-block-body { padding: 10px 12px 12px; }
+  .btn { width: 100%; padding: 13px; border: none; border-radius: 11px; font-family: 'Barlow Condensed', sans-serif; font-size: 15px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; transition: all 0.12s; margin-bottom: 8px; }
+  .btn:active { transform: scale(0.98); }
+  .btn-primary { background: var(--accent); color: #ffffff; }
+  .btn-ghost { background: none; color: var(--text2); border: 1.5px solid var(--border); }
+  .btn-purple { background: rgba(155,108,255,0.15); color: var(--purple); border: 1.5px solid rgba(155,108,255,0.3); }
+  .btn-danger { background: rgba(232,72,72,0.12); color: var(--red); border: 1.5px solid rgba(232,72,72,0.3); }
+  .btn-sm { width: auto; padding: 7px 13px; font-size: 12px; margin-bottom: 0; border-radius: 8px; }
+  .cardio-type-pills { display: flex; gap: 8px; flex-wrap: wrap; padding: 0 0 4px; }
+  .cpill { padding: 8px 14px; border: 1.5px solid var(--border); border-radius: 20px; background: var(--surface2); color: var(--text2); font-family: 'Barlow Condensed', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; cursor: pointer; transition: all 0.15s; }
+  .cpill.active { background: var(--blue); color: #fff; border-color: var(--blue); }
+  .template-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin: 0 16px 10px; overflow: hidden; }
+  .template-card-header { padding: 12px 14px 8px; display: flex; align-items: center; justify-content: space-between; }
+  .template-name { font-family: 'Barlow Condensed', sans-serif; font-size: 20px; font-weight: 900; flex: 1; }
+  .template-badge { font-family: 'Barlow Condensed', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 3px 8px; border-radius: 6px; }
+  .badge-strength { background: rgba(107,143,212,0.15); color: var(--accent); }
+  .badge-cardio { background: rgba(107,143,212,0.1); color: #8aaee8; }
+  .template-exercises { font-size: 13px; color: var(--text2); padding: 0 14px 8px; line-height: 1.7; }
+  .template-actions { display: flex; gap: 8px; padding: 8px 14px 12px; border-top: 1px solid var(--border); }
+  .history-entry { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin: 0 16px 10px; overflow: hidden; }
+  .history-entry-header { padding: 12px 14px 8px; }
+  .history-date { font-family: 'Barlow Condensed', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); margin-bottom: 3px; }
+  .history-workout-name { font-family: 'Barlow Condensed', sans-serif; font-size: 20px; font-weight: 900; line-height: 1.1; }
+  .history-stats { display: flex; gap: 16px; padding: 4px 14px 10px; flex-wrap: wrap; }
+  .hstat-val { font-family: 'Barlow Condensed', sans-serif; font-size: 20px; font-weight: 900; }
+  .hstat-label { font-family: 'Barlow Condensed', sans-serif; font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text3); }
+  .history-detail { padding: 0 14px 10px; font-size: 13px; color: var(--text2); line-height: 1.5; }
+  .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 0 16px 12px; }
+  .stat-tile { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; }
+  .stat-tile-val { font-family: 'Barlow Condensed', sans-serif; font-size: 32px; font-weight: 900; line-height: 1; }
+  .stat-tile-val.accent { color: var(--accent); }
+  .stat-tile-label { font-family: 'Barlow Condensed', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text3); margin-top: 4px; }
+  .modal-overlay { display: none; position: fixed; inset: 0; z-index: 300; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); align-items: flex-end; justify-content: center; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 20px 20px 0 0; padding: 20px 20px calc(20px + var(--safe-bottom)); width: 100%; max-width: 430px; animation: slideUp 0.25s cubic-bezier(0.34,1.56,0.64,1); }
+  @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+  .modal-title { font-family: 'Barlow Condensed', sans-serif; font-size: 22px; font-weight: 900; margin-bottom: 14px; text-transform: uppercase; }
+  .rest-timer { display: none; position: fixed; bottom: calc(68px + var(--safe-bottom)); left: 50%; transform: translateX(-50%); background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 10px 18px; font-family: 'Barlow Condensed', sans-serif; font-size: 20px; font-weight: 900; color: var(--accent); z-index: 99; gap: 12px; align-items: center; backdrop-filter: blur(8px); box-shadow: 0 4px 24px rgba(0,0,0,0.4); max-width: 390px; width: calc(100% - 32px); justify-content: space-between; }
+  .rest-timer.visible { display: flex; }
+  .timer-label { font-size: 10px; color: var(--text3); letter-spacing: 0.1em; text-transform: uppercase; }
+  .timer-stop { background: none; border: none; color: var(--text3); font-size: 18px; cursor: pointer; }
+  .toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-80px); background: var(--green); color: #0a0a0c; font-family: 'Barlow Condensed', sans-serif; font-size: 14px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; padding: 9px 20px; border-radius: 30px; z-index: 999; transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1); white-space: nowrap; }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .tmpl-name-input { background: #1e1e24; border: none; border-bottom: 2px solid var(--border); border-radius: 8px; font-family: 'Barlow Condensed', sans-serif; font-size: 28px; font-weight: 900; padding: 8px 12px; letter-spacing: -0.01em; outline: none; transition: border-color 0.15s; color: #f0f0f4; }
+  .tmpl-name-input::placeholder { color: #5a5a70; }
+  .tmpl-name-input:focus { border-bottom-color: var(--accent); }
+  .empty-state { text-align: center; padding: 36px 20px; color: var(--text3); }
+  .empty-icon { font-size: 36px; margin-bottom: 8px; opacity: 0.4; }
+  .empty-text { font-family: 'Barlow Condensed', sans-serif; font-size: 17px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
+  ::-webkit-scrollbar { display: none; }
+  select option { background: var(--surface2); }
+</style>
+</head>
+<body>
+
+<div class="toast" id="toast"></div>
+<div class="rest-timer" id="restTimer">
+  <div><div class="timer-label">Rest Timer</div><span id="timerDisplay">1:30</span></div>
+  <button class="timer-stop" onclick="stopTimer()">✕</button>
+</div>
+
+<div class="modal-overlay" id="saveTemplateModal">
+  <div class="modal">
+    <div class="modal-title">Save as Template</div>
+    <div class="input-group">
+      <div class="input-label">Template Name</div>
+      <input type="text" id="templateNameInput" placeholder="e.g. Push Day, Monday Legs…">
+    </div>
+    <button class="btn btn-primary" onclick="confirmSaveTemplate()">Save Template</button>
+    <button class="btn btn-ghost" onclick="closeModal('saveTemplateModal')">Cancel</button>
+  </div>
+</div>
+
+<!-- LOG -->
+
+<div class="screen active" id="screen-log">
+  <div class="page-header">
+    <div class="page-title">LOG <span>WORKOUT</span></div>
+    <div style="display:flex;align-items:center;gap:8px;margin-top:10px">
+      <input type="datetime-local" id="workout-date" style="flex:1;font-size:14px;padding:9px 12px;color:var(--text2)">
+      <button onclick="resetWorkoutDate()" style="background:none;border:1.5px solid var(--border);border-radius:8px;color:var(--text3);font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;padding:9px 10px;cursor:pointer;white-space:nowrap">Now</button>
+    </div>
+  </div>
+  <div class="type-tabs">
+    <div class="type-tab active" onclick="selectWorkoutType('strength',this)">💪 Strength</div>
+    <div class="type-tab" onclick="selectWorkoutType('cardio',this)">🏃 Cardio</div>
+  </div>
+  <div id="strength-form">
+    <div style="padding:0 16px 4px;display:flex;gap:8px;align-items:center">
+      <select id="template-select" style="flex:1;font-size:14px;padding:9px 12px"><option value="">Load a template…</option></select>
+      <button class="btn btn-purple btn-sm" onclick="loadSelectedTemplate()">Load</button>
+    </div>
+    <div class="section-label">EXERCISES</div>
+    <div id="exercise-list"></div>
+    <div style="padding:0 16px"><button class="btn btn-ghost" onclick="addExercise()">＋ Add Exercise</button></div>
+    <div class="divider"></div>
+    <div style="padding:0 16px 4px">
+      <textarea id="strength-notes" placeholder="Notes (optional)…" rows="2" style="resize:none;font-size:15px;padding:11px 14px;margin-bottom:8px"></textarea>
+      <button class="btn btn-primary" onclick="saveWorkout()">SAVE WORKOUT</button>
+      <button class="btn btn-purple" onclick="openSaveTemplateModal()">📋 Save as Template</button>
+    </div>
+  </div>
+  <div id="cardio-form" style="display:none">
+    <div style="padding:0 16px 4px;display:flex;gap:8px;align-items:center">
+      <select id="cardio-template-select" style="flex:1;font-size:14px;padding:9px 12px"><option value="">Load a template…</option></select>
+      <button class="btn btn-purple btn-sm" onclick="loadSelectedCardioTemplate()">Load</button>
+    </div>
+    <div style="padding:4px 16px 8px">
+      <div class="input-label" style="margin-bottom:8px">Activity Type</div>
+      <div class="cardio-type-pills">
+        <div class="cpill active" onclick="selectCardioType('Rucking',this)">🎒 Rucking</div>
+        <div class="cpill" onclick="selectCardioType('Cycling',this)">🚴 Cycling</div>
+        <div class="cpill" onclick="selectCardioType('Walking',this)">🚶 Walking</div>
+      </div>
+    </div>
+    <div style="padding:0 16px">
+      <div class="input-row">
+        <div class="input-group"><div class="input-label">Duration</div><input type="text" id="cardio-duration" placeholder="45 min"></div>
+        <div class="input-group"><div class="input-label">Distance</div><input type="text" id="cardio-distance" placeholder="5.0 mi" inputmode="decimal"></div>
+      </div>
+      <div class="input-row">
+        <div class="input-group"><div class="input-label">Avg HR (bpm)</div><input type="number" id="cardio-hr" placeholder="145" inputmode="numeric"></div>
+        <div class="input-group"><div class="input-label">Elevation Gain</div><input type="text" id="cardio-elevation" placeholder="300 ft"></div>
+      </div>
+      <div id="ruck-extras" class="input-group">
+        <div class="input-label">Ruck Weight (lbs)</div>
+        <input type="number" id="ruck-weight" placeholder="30" inputmode="numeric">
+      </div>
+      <textarea id="cardio-notes" placeholder="Route, conditions, how you felt…" rows="2" style="resize:none;font-size:15px;padding:11px 14px;margin-bottom:8px;width:100%"></textarea>
+      <button class="btn btn-primary" onclick="saveWorkout()">SAVE WORKOUT</button>
+      <button class="btn btn-purple" onclick="openSaveTemplateModal()">📋 Save as Template</button>
+    </div>
+  </div>
+</div>
+
+<!-- TEMPLATES -->
+
+<div class="screen" id="screen-templates">
+  <div id="tmpl-list-view">
+    <div class="page-header">
+      <div style="display:flex;justify-content:space-between;align-items:flex-end">
+        <div class="page-title">MY <span>TEMPLATES</span></div>
+        <button class="btn btn-primary btn-sm" onclick="openTemplateBuilder(null)" style="margin-bottom:6px;white-space:nowrap">＋ New</button>
+      </div>
+    </div>
+    <div id="templates-list"></div>
+    <div id="templates-empty" style="display:none">
+      <div class="empty-state">
+        <div class="empty-icon">📋</div>
+        <div class="empty-text">No templates yet</div>
+        <div style="font-size:13px;margin-top:8px">Tap <strong style="color:var(--accent)">＋ New</strong> to build your first template</div>
+      </div>
+    </div>
+  </div>
+  <div id="tmpl-builder-view" style="display:none">
+    <div class="page-header">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <button onclick="closeTemplateBuilder()" style="background:none;border:none;color:var(--text2);font-size:15px;cursor:pointer;padding:0;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.05em;text-transform:uppercase">← Back</button>
+        <span id="tmpl-builder-mode-label" style="font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3)">NEW TEMPLATE</span>
+      </div>
+      <input type="text" id="tmpl-builder-name" class="tmpl-name-input" placeholder="Template name…" style="width:100%;color:#f0f0f4;background:#1e1e24;border-bottom:2px solid var(--accent);padding:8px 12px;border-radius:8px">
+    </div>
+    <div class="type-tabs" style="padding-top:0">
+      <div class="type-tab active" id="tmpl-tab-strength" onclick="selectTmplType('strength',this)">💪 Strength</div>
+      <div class="type-tab" id="tmpl-tab-cardio" onclick="selectTmplType('cardio',this)">🏃 Cardio</div>
+    </div>
+    <div id="tmpl-strength-builder">
+      <div class="section-label">EXERCISES &amp; TARGET SETS</div>
+      <div id="tmpl-exercise-list"></div>
+      <div style="padding:0 16px 12px"><button class="btn btn-ghost" onclick="addTmplExercise()">＋ Add Exercise</button></div>
+    </div>
+    <div id="tmpl-cardio-builder" style="display:none">
+      <div style="padding:4px 16px 10px">
+        <div class="input-label" style="margin-bottom:8px">Activity Type</div>
+        <div class="cardio-type-pills">
+          <div class="cpill tmpl-cpill active" onclick="selectTmplCardioType('Rucking',this)">🎒 Rucking</div>
+          <div class="cpill tmpl-cpill" onclick="selectTmplCardioType('Cycling',this)">🚴 Cycling</div>
+          <div class="cpill tmpl-cpill" onclick="selectTmplCardioType('Walking',this)">🚶 Walking</div>
+        </div>
+      </div>
+      <div style="padding:0 16px">
+        <div id="tmpl-ruck-extras" class="input-group">
+          <div class="input-label">Default Ruck Weight (lbs)</div>
+          <input type="number" id="tmpl-ruck-weight" placeholder="30" inputmode="numeric">
+        </div>
+        <div class="input-group">
+          <div class="input-label">Notes / Route Description</div>
+          <textarea id="tmpl-cardio-notes" placeholder="Describe the route or default setup…" rows="3" style="resize:none;font-size:15px;padding:11px 14px;width:100%"></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="divider"></div>
+    <div style="padding:0 16px 8px">
+      <button class="btn btn-primary" onclick="saveTmplBuilder()">SAVE TEMPLATE</button>
+      <button class="btn btn-ghost" onclick="closeTemplateBuilder()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- HISTORY -->
+
+<div class="screen" id="screen-history">
+  <div class="page-header"><div class="page-title">WORK <span>HISTORY</span></div></div>
+  <div id="history-list"></div>
+</div>
+
+<!-- STATS -->
+
+<div class="screen" id="screen-stats">
+  <div class="page-header"><div class="page-title">MY <span>STATS</span></div></div>
+  <div class="section-label">ALL TIME</div>
+  <div class="stats-grid">
+    <div class="stat-tile"><div class="stat-tile-val accent" id="stat-total"></div><div class="stat-tile-label">Total Workouts</div></div>
+    <div class="stat-tile"><div class="stat-tile-val" id="stat-streak"></div><div class="stat-tile-label">Day Streak</div></div>
+    <div class="stat-tile"><div class="stat-tile-val" id="stat-strength"></div><div class="stat-tile-label">Strength Sessions</div></div>
+    <div class="stat-tile"><div class="stat-tile-val" id="stat-cardio"></div><div class="stat-tile-label">Cardio Sessions</div></div>
+  </div>
+  <div class="section-label" style="margin-top:4px">RECENT</div>
+  <div id="stats-recent-list"></div>
+  <div class="divider"></div>
+  <div style="padding:0 16px"><button class="btn btn-danger" onclick="confirmClear()">Clear All Data</button></div>
+</div>
+
+<nav class="nav-bar">
+  <button class="nav-btn active" onclick="showScreen('log',this)"><span class="nav-icon">＋</span>Log</button>
+  <button class="nav-btn" onclick="showScreen('templates',this)"><span class="nav-icon">📋</span>Templates</button>
+  <button class="nav-btn" onclick="showScreen('history',this)"><span class="nav-icon">🕐</span>History</button>
+  <button class="nav-btn" onclick="showScreen('stats',this)"><span class="nav-icon">📊</span>Stats</button>
+</nav>
+
+<script>
+let workouts=[], templates=[];
+let currentType='strength',currentCardioType='Rucking';
+let exercises=[],tmplExercises=[];
+let tmplCurrentType='strength',tmplCurrentCardioType='Rucking';
+let editingTemplateId=null;
+let timerInterval=null,timerSeconds=0;
+
+// ─── STORAGE: write to localStorage AND cookies for max iOS persistence ───
+function saveWorkouts(){
+  const data=JSON.stringify(workouts);
+  try{ localStorage.setItem('forge_workouts', data); }catch(e){}
+  setCookie('forge_workouts', data);
+}
+function saveTemplates(){
+  const data=JSON.stringify(templates);
+  try{ localStorage.setItem('forge_templates', data); }catch(e){}
+  setCookie('forge_templates', data);
+}
+
+function setCookie(name, value){
+  // Expires 10 years from now
+  const expires = new Date(Date.now() + 10*365*24*60*60*1000).toUTCString();
+  // Split into chunks of 3000 chars to stay under cookie size limits
+  const chunks = [];
+  for(let i=0; i<value.length; i+=3000) chunks.push(value.slice(i,i+3000));
+  // Delete old chunks first
+  for(let i=0; i<20; i++) document.cookie=`${name}_${i}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
+  // Write new chunks
+  chunks.forEach((chunk,i)=>{
+    document.cookie=`${name}_${i}=${encodeURIComponent(chunk)};expires=${expires};path=/`;
+  });
+  document.cookie=`${name}_count=${chunks.length};expires=${expires};path=/`;
+}
+
+function getCookie(name){
+  const pairs={};
+  document.cookie.split(';').forEach(c=>{
+    const [k,v]=c.trim().split('=');
+    if(k) pairs[k.trim()]=v?decodeURIComponent(v):'';
+  });
+  const count=parseInt(pairs[`${name}_count`]||'0');
+  if(!count) return null;
+  let result='';
+  for(let i=0;i<count;i++) result+=(pairs[`${name}_${i}`]||'');
+  return result||null;
+}
+
+function loadData(key){
+  // Try localStorage first, then cookies
+  let data=null;
+  try{ data=localStorage.getItem(key); }catch(e){}
+  if(!data) data=getCookie(key);
+  if(data){try{return JSON.parse(data);}catch(e){}}
+  return [];
+}
+
+function init(){
+  workouts=loadData('forge_workouts');
+  templates=loadData('forge_templates');
+  resetWorkoutDate();
+  addExercise();
+  refreshTemplateSelects();
+}
+
+function resetWorkoutDate(){
+  const now=new Date();
+  const local=new Date(now.getTime()-now.getTimezoneOffset()*60000);
+  document.getElementById('workout-date').value=local.toISOString().slice(0,16);
+}
+
+function showScreen(name,btn){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('screen-'+name).classList.add('active');
+  btn.classList.add('active');
+  if(name==='history')renderHistory();
+  if(name==='stats')renderStats();
+  if(name==='templates')renderTemplates();
+}
+
+function selectWorkoutType(type,el){
+  currentType=type;
+  document.querySelectorAll('.type-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('strength-form').style.display=type==='strength'?'block':'none';
+  document.getElementById('cardio-form').style.display=type==='cardio'?'block':'none';
+}
+
+function selectCardioType(type,el){
+  currentCardioType=type;
+  document.querySelectorAll('#cardio-form .cpill').forEach(p=>p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('ruck-extras').style.display=type==='Rucking'?'block':'none';
+}
+
+function getKnownExercises(){
+  const names=new Set();
+  [...workouts,...templates].forEach(w=>{if(w.exercises)w.exercises.forEach(e=>{if(e.name&&e.name.trim())names.add(e.name.trim());});});
+  return[...names].sort();
+}
+
+function showAutocomplete(inputEl,exId,prefix){
+  hideAllAutocomplete();
+  const val=inputEl.value.trim().toLowerCase();
+  if(!val)return;
+  const matches=getKnownExercises().filter(n=>n.toLowerCase().includes(val)&&n.toLowerCase()!==val.toLowerCase());
+  if(!matches.length)return;
+  const wrapper=inputEl.closest('.ac-wrapper');
+  if(!wrapper)return;
+  const dd=document.createElement('div');
+  dd.className='ac-dropdown';
+  matches.slice(0,6).forEach(name=>{
+    const item=document.createElement('div');
+    item.className='ac-item';
+    item.textContent=name;
+    const pick=()=>{inputEl.value=name;if(prefix==='tmpl')updateTmplExName(exId,name);else updateExName(exId,name);hideAllAutocomplete();};
+    item.onmousedown=e=>{e.preventDefault();pick();};
+    item.ontouchstart=e=>{e.preventDefault();pick();};
+    dd.appendChild(item);
+  });
+  wrapper.appendChild(dd);
+}
+function hideAllAutocomplete(){document.querySelectorAll('.ac-dropdown').forEach(d=>d.remove());}
+
+function addExercise(){
+  const id=Date.now()+Math.random();
+  exercises.push({id,name:'',sets:[]});
+  renderExercises();
+  addSet(exercises[exercises.length-1].id);
+}
+
+function renderExercises(){
+  const container=document.getElementById('exercise-list');
+  container.innerHTML='';
+  exercises.forEach(ex=>{
+    const div=document.createElement('div');
+    div.className='exercise-block';
+    div.innerHTML=`
+      <div class="exercise-block-header">
+        <div class="ac-wrapper" style="flex:1;margin-right:8px;position:relative">
+          <input type="text" value="${escHtml(ex.name)}" placeholder="Exercise name"
+            style="background:transparent;border:none;font-family:'Barlow Condensed',sans-serif;font-size:19px;font-weight:800;padding:0;color:var(--text);width:100%;letter-spacing:0.02em;outline:none"
+            oninput="updateExName(${ex.id},this.value);showAutocomplete(this,${ex.id},'log')"
+            onblur="setTimeout(hideAllAutocomplete,200)">
+        </div>
+        <button onclick="removeExercise(${ex.id})" style="background:none;border:none;color:var(--text3);font-size:17px;cursor:pointer;flex-shrink:0;padding:4px">✕</button>
+      </div>
+      <div class="exercise-block-body">
+        <div id="sets-${ex.id}"></div>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button class="btn btn-ghost btn-sm" onclick="addSet(${ex.id})">＋ Set</button>
+          <button class="btn btn-ghost btn-sm" onclick="startTimer(90)" style="color:var(--accent)">⏱ Rest</button>
+        </div>
+      </div>`;
+    container.appendChild(div);
+    renderSets(ex.id);
+  });
+}
+
+function updateExName(id,val){const ex=exercises.find(e=>e.id===id);if(ex)ex.name=val;}
+function removeExercise(id){exercises=exercises.filter(e=>e.id!==id);renderExercises();}
+
+function addSet(exId){
+  const ex=exercises.find(e=>e.id===exId);if(!ex)return;
+  const last=ex.sets[ex.sets.length-1];
+  ex.sets.push({reps:last?last.reps:'',weight:last?last.weight:'',duration:last?last.duration:'',mode:last?last.mode:'reps'});
+  renderSets(exId);
+}
+
+function renderSets(exId){
+  const ex=exercises.find(e=>e.id===exId);if(!ex)return;
+  const container=document.getElementById('sets-'+exId);if(!container)return;
+  container.innerHTML='';
+  ex.sets.forEach((set,idx)=>{
+    const mode=set.mode||'reps';
+    const row=document.createElement('div');
+    row.className='set-row';
+    row.style.cssText='flex-direction:column;align-items:stretch;margin-bottom:8px';
+    const topRow=document.createElement('div');
+    topRow.style.cssText='display:flex;gap:5px;align-items:center';
+    topRow.innerHTML=`
+      <div class="set-num" style="width:28px;flex-shrink:0">${idx+1}</div>
+      <div class="set-mode-pills" style="flex:1;margin-bottom:0">
+        <div class="set-mode-pill ${mode==='reps'?'active':''}" onclick="setMode(${exId},${idx},'reps','log')">Reps</div>
+        <div class="set-mode-pill ${mode==='duration'?'active':''}" onclick="setMode(${exId},${idx},'duration','log')">Duration</div>
+        <div class="set-mode-pill ${mode==='bw'?'active':''}" onclick="setMode(${exId},${idx},'bw','log')">BW</div>
+      </div>
+      <button class="set-del" style="width:36px;flex-shrink:0" onclick="removeSet(${exId},${idx})">−</button>`;
+    row.appendChild(topRow);
+    const inputRow=document.createElement('div');
+    inputRow.style.cssText='display:flex;gap:5px;padding-left:33px;margin-top:5px';
+    if(mode==='reps'){
+      inputRow.innerHTML=`<input type="number" value="${set.reps||''}" placeholder="Reps" inputmode="numeric" onchange="updateSet(${exId},${idx},'reps',this.value)" style="flex:1;padding:8px 6px;font-size:15px;text-align:center;border-radius:8px"><input type="number" value="${set.weight||''}" placeholder="lbs" inputmode="decimal" onchange="updateSet(${exId},${idx},'weight',this.value)" style="flex:1;padding:8px 6px;font-size:15px;text-align:center;border-radius:8px">`;
+    }else if(mode==='duration'){
+      inputRow.innerHTML=`<input type="text" value="${set.duration||''}" placeholder="e.g. 60s or 2:00" onchange="updateSet(${exId},${idx},'duration',this.value)" style="flex:2;padding:8px 10px;font-size:15px;border-radius:8px"><input type="number" value="${set.weight||''}" placeholder="lbs (opt)" inputmode="decimal" onchange="updateSet(${exId},${idx},'weight',this.value)" style="flex:1;padding:8px 6px;font-size:15px;text-align:center;border-radius:8px">`;
+    }else{
+      inputRow.innerHTML=`<input type="number" value="${set.reps||''}" placeholder="Reps" inputmode="numeric" onchange="updateSet(${exId},${idx},'reps',this.value)" style="flex:1;padding:8px 6px;font-size:15px;text-align:center;border-radius:8px"><div class="bw-tag" style="flex:1">BW</div>`;
+    }
+    row.appendChild(inputRow);
+    container.appendChild(row);
+  });
+}
+
+function updateSet(exId,idx,field,val){const ex=exercises.find(e=>e.id===exId);if(ex&&ex.sets[idx])ex.sets[idx][field]=val;}
+function removeSet(exId,idx){const ex=exercises.find(e=>e.id===exId);if(ex){ex.sets.splice(idx,1);renderSets(exId);}}
+function setMode(exId,idx,mode,scope){
+  if(scope==='log'){const ex=exercises.find(e=>e.id===exId);if(ex&&ex.sets[idx]){ex.sets[idx].mode=mode;renderSets(exId);}}
+  else{const ex=tmplExercises.find(e=>e.id===exId);if(ex&&ex.sets[idx]){ex.sets[idx].mode=mode;renderTmplSets(exId);}}
+}
+
+function saveWorkout(){
+  const dateVal=document.getElementById('workout-date').value;
+  const date=dateVal?new Date(dateVal):new Date();
+  let w={id:Date.now(),date:date.toISOString(),type:currentType};
+  if(currentType==='strength'){
+    const valid=exercises.filter(e=>e.name.trim()||e.sets.length>0);
+    if(!valid.length){showToast('Add at least one exercise!','#e84848');return;}
+    w.exercises=valid.map(e=>({...e,sets:e.sets.map(s=>({reps:s.reps,weight:s.weight,duration:s.duration,mode:s.mode||'reps'}))}));
+    w.notes=document.getElementById('strength-notes').value;
+  }else{
+    w.cardioType=currentCardioType;
+    w.duration=document.getElementById('cardio-duration').value;
+    w.distance=document.getElementById('cardio-distance').value;
+    w.hr=document.getElementById('cardio-hr').value;
+    w.elevation=document.getElementById('cardio-elevation').value;
+    w.ruckWeight=document.getElementById('ruck-weight').value;
+    w.notes=document.getElementById('cardio-notes').value;
+    if(!w.duration&&!w.distance){showToast('Add duration or distance!','#e84848');return;}
+  }
+  workouts.unshift(w);
+  saveWorkouts();
+  showToast('Workout Saved! 🔥');
+  resetLog();
+}
+
+function resetLog(){
+  exercises=[];
+  resetWorkoutDate();
+  ['strength-notes','cardio-duration','cardio-distance','cardio-hr','cardio-elevation','ruck-weight','cardio-notes'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  addExercise();
+}
+
+function openSaveTemplateModal(){
+  if(currentType==='strength'){const valid=exercises.filter(e=>e.name.trim()||e.sets.length>0);if(!valid.length){showToast('Add exercises first!','#e84848');return;}}
+  document.getElementById('templateNameInput').value='';
+  openModal('saveTemplateModal');
+  setTimeout(()=>document.getElementById('templateNameInput').focus(),300);
+}
+
+function confirmSaveTemplate(){
+  const name=document.getElementById('templateNameInput').value.trim();
+  if(!name){showToast('Enter a template name!','#e84848');return;}
+  let tmpl={id:Date.now(),name,type:currentType};
+  if(currentType==='strength'){
+    tmpl.exercises=exercises.filter(e=>e.name.trim()||e.sets.length>0).map(e=>({name:e.name,sets:e.sets.map(s=>({reps:s.reps,weight:s.weight,duration:s.duration,mode:s.mode||'reps'}))}));
+  }else{tmpl.cardioType=currentCardioType;tmpl.ruckWeight=document.getElementById('ruck-weight').value;tmpl.notes=document.getElementById('cardio-notes').value;}
+  const existing=templates.findIndex(t=>t.name.toLowerCase()===name.toLowerCase());
+  if(existing>=0)templates[existing]=tmpl;else templates.push(tmpl);
+  saveTemplates();
+  closeModal('saveTemplateModal');refreshTemplateSelects();showToast('Template saved! 📋');
+}
+
+function refreshTemplateSelects(){
+  const sTmpls=templates.filter(t=>t.type==='strength');
+  const cTmpls=templates.filter(t=>t.type==='cardio');
+  const sel=document.getElementById('template-select');
+  sel.innerHTML='<option value="">Load a template…</option>';
+  sTmpls.forEach(t=>{const o=document.createElement('option');o.value=t.id;o.textContent=t.name;sel.appendChild(o);});
+  const csel=document.getElementById('cardio-template-select');
+  csel.innerHTML='<option value="">Load a template…</option>';
+  cTmpls.forEach(t=>{const o=document.createElement('option');o.value=t.id;o.textContent=t.name;csel.appendChild(o);});
+}
+
+function loadSelectedTemplate(){
+  const id=document.getElementById('template-select').value;
+  if(!id){showToast('Select a template first','#e84848');return;}
+  const tmpl=templates.find(t=>t.id==id);if(!tmpl)return;
+  exercises=tmpl.exercises.map(e=>({id:Date.now()+Math.random(),name:e.name,sets:(e.sets||[]).map(s=>({reps:s.reps,weight:s.weight,duration:s.duration,mode:s.mode||'reps'}))}));
+  renderExercises();showToast('Loaded "'+tmpl.name+'" ✓');
+}
+
+function loadSelectedCardioTemplate(){
+  const id=document.getElementById('cardio-template-select').value;
+  if(!id){showToast('Select a template first','#e84848');return;}
+  const tmpl=templates.find(t=>t.id==id);if(!tmpl)return;
+  currentCardioType=tmpl.cardioType||'Rucking';
+  document.querySelectorAll('#cardio-form .cpill').forEach(p=>p.classList.toggle('active',p.textContent.includes(currentCardioType)));
+  document.getElementById('ruck-extras').style.display=currentCardioType==='Rucking'?'block':'none';
+  if(tmpl.ruckWeight)document.getElementById('ruck-weight').value=tmpl.ruckWeight;
+  if(tmpl.notes)document.getElementById('cardio-notes').value=tmpl.notes;
+  showToast('Loaded "'+tmpl.name+'" ✓');
+}
+
+function openTemplateBuilder(tmplId){
+  tmplExercises=[];tmplCurrentType='strength';tmplCurrentCardioType='Rucking';editingTemplateId=tmplId;
+  document.getElementById('tmpl-builder-name').value='';
+  document.getElementById('tmpl-ruck-weight').value='';
+  document.getElementById('tmpl-cardio-notes').value='';
+  document.getElementById('tmpl-builder-mode-label').textContent=tmplId?'EDIT TEMPLATE':'NEW TEMPLATE';
+  document.getElementById('tmpl-tab-strength').classList.add('active');
+  document.getElementById('tmpl-tab-cardio').classList.remove('active');
+  document.getElementById('tmpl-strength-builder').style.display='block';
+  document.getElementById('tmpl-cardio-builder').style.display='none';
+  document.querySelectorAll('.tmpl-cpill').forEach(p=>p.classList.remove('active'));
+  document.querySelector('.tmpl-cpill').classList.add('active');
+  document.getElementById('tmpl-ruck-extras').style.display='block';
+  if(tmplId){
+    const tmpl=templates.find(t=>t.id===tmplId);if(!tmpl)return;
+    document.getElementById('tmpl-builder-name').value=tmpl.name;
+    tmplCurrentType=tmpl.type;
+    if(tmpl.type==='cardio'){
+      document.getElementById('tmpl-tab-strength').classList.remove('active');
+      document.getElementById('tmpl-tab-cardio').classList.add('active');
+      document.getElementById('tmpl-strength-builder').style.display='none';
+      document.getElementById('tmpl-cardio-builder').style.display='block';
+      tmplCurrentCardioType=tmpl.cardioType||'Rucking';
+      document.querySelectorAll('.tmpl-cpill').forEach(p=>p.classList.toggle('active',p.textContent.includes(tmplCurrentCardioType)));
+      document.getElementById('tmpl-ruck-extras').style.display=tmplCurrentCardioType==='Rucking'?'block':'none';
+      if(tmpl.ruckWeight)document.getElementById('tmpl-ruck-weight').value=tmpl.ruckWeight;
+      if(tmpl.notes)document.getElementById('tmpl-cardio-notes').value=tmpl.notes;
+    }else{
+      tmplExercises=(tmpl.exercises||[]).map(e=>({id:Date.now()+Math.random(),name:e.name,sets:(e.sets||[]).map(s=>({reps:s.reps,weight:s.weight,duration:s.duration,mode:s.mode||'reps'}))}));
+    }
+  }
+  if(!tmplId||tmplCurrentType==='strength'){if(tmplExercises.length===0)addTmplExercise();else renderTmplExercises();}
+  document.getElementById('tmpl-list-view').style.display='none';
+  document.getElementById('tmpl-builder-view').style.display='block';
+  window.scrollTo(0,0);
+}
+
+function closeTemplateBuilder(){
+  document.getElementById('tmpl-builder-view').style.display='none';
+  document.getElementById('tmpl-list-view').style.display='block';
+  renderTemplates();
+}
+
+function selectTmplType(type,el){
+  tmplCurrentType=type;
+  document.querySelectorAll('#screen-templates .type-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('tmpl-strength-builder').style.display=type==='strength'?'block':'none';
+  document.getElementById('tmpl-cardio-builder').style.display=type==='cardio'?'block':'none';
+  if(type==='strength'&&tmplExercises.length===0)addTmplExercise();
+}
+
+function selectTmplCardioType(type,el){
+  tmplCurrentCardioType=type;
+  document.querySelectorAll('.tmpl-cpill').forEach(p=>p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('tmpl-ruck-extras').style.display=type==='Rucking'?'block':'none';
+}
+
+function addTmplExercise(){
+  const id=Date.now()+Math.random();
+  tmplExercises.push({id,name:'',sets:[]});
+  renderTmplExercises();
+  addTmplSet(tmplExercises[tmplExercises.length-1].id);
+}
+
+function renderTmplExercises(){
+  const container=document.getElementById('tmpl-exercise-list');
+  container.innerHTML='';
+  tmplExercises.forEach(ex=>{
+    const div=document.createElement('div');
+    div.className='exercise-block';
+    div.innerHTML=`
+      <div class="exercise-block-header">
+        <div class="ac-wrapper" style="flex:1;margin-right:8px;position:relative">
+          <input type="text" value="${escHtml(ex.name)}" placeholder="Exercise name"
+            style="background:transparent;border:none;font-family:'Barlow Condensed',sans-serif;font-size:19px;font-weight:800;padding:0;color:var(--text);width:100%;letter-spacing:0.02em;outline:none"
+            oninput="updateTmplExName(${ex.id},this.value);showAutocomplete(this,${ex.id},'tmpl')"
+            onblur="setTimeout(hideAllAutocomplete,200)">
+        </div>
+        <button onclick="removeTmplExercise(${ex.id})" style="background:none;border:none;color:var(--text3);font-size:17px;cursor:pointer;flex-shrink:0;padding:4px">✕</button>
+      </div>
+      <div class="exercise-block-body">
+        <div id="tmpl-sets-${ex.id}"></div>
+        <div style="margin-top:8px"><button class="btn btn-ghost btn-sm" onclick="addTmplSet(${ex.id})">＋ Set</button></div>
+      </div>`;
+    container.appendChild(div);
+    renderTmplSets(ex.id);
+  });
+}
+
+function updateTmplExName(id,val){const ex=tmplExercises.find(e=>e.id===id);if(ex)ex.name=val;}
+function removeTmplExercise(id){tmplExercises=tmplExercises.filter(e=>e.id!==id);renderTmplExercises();}
+
+function addTmplSet(exId){
+  const ex=tmplExercises.find(e=>e.id===exId);if(!ex)return;
+  const last=ex.sets[ex.sets.length-1];
+  ex.sets.push({reps:last?last.reps:'',weight:last?last.weight:'',duration:last?last.duration:'',mode:last?last.mode:'reps'});
+  renderTmplSets(exId);
+}
+
+function renderTmplSets(exId){
+  const ex=tmplExercises.find(e=>e.id===exId);if(!ex)return;
+  const container=document.getElementById('tmpl-sets-'+exId);if(!container)return;
+  container.innerHTML='';
+  ex.sets.forEach((set,idx)=>{
+    const mode=set.mode||'reps';
+    const row=document.createElement('div');
+    row.className='set-row';
+    row.style.cssText='flex-direction:column;align-items:stretch;margin-bottom:8px';
+    const topRow=document.createElement('div');
+    topRow.style.cssText='display:flex;gap:5px;align-items:center';
+    topRow.innerHTML=`
+      <div class="set-num" style="width:28px;flex-shrink:0">${idx+1}</div>
+      <div class="set-mode-pills" style="flex:1;margin-bottom:0">
+        <div class="set-mode-pill ${mode==='reps'?'active':''}" onclick="setMode(${exId},${idx},'reps','tmpl')">Reps</div>
+        <div class="set-mode-pill ${mode==='duration'?'active':''}" onclick="setMode(${exId},${idx},'duration','tmpl')">Duration</div>
+        <div class="set-mode-pill ${mode==='bw'?'active':''}" onclick="setMode(${exId},${idx},'bw','tmpl')">BW</div>
+      </div>
+      <button class="set-del" style="width:36px;flex-shrink:0" onclick="removeTmplSet(${exId},${idx})">−</button>`;
+    row.appendChild(topRow);
+    const inputRow=document.createElement('div');
+    inputRow.style.cssText='display:flex;gap:5px;padding-left:33px;margin-top:5px';
+    if(mode==='reps'){
+      inputRow.innerHTML=`<input type="number" value="${set.reps||''}" placeholder="Reps" inputmode="numeric" onchange="updateTmplSet(${exId},${idx},'reps',this.value)" style="flex:1;padding:8px 6px;font-size:15px;text-align:center;border-radius:8px"><input type="number" value="${set.weight||''}" placeholder="lbs" inputmode="decimal" onchange="updateTmplSet(${exId},${idx},'weight',this.value)" style="flex:1;padding:8px 6px;font-size:15px;text-align:center;border-radius:8px">`;
+    }else if(mode==='duration'){
+      inputRow.innerHTML=`<input type="text" value="${set.duration||''}" placeholder="e.g. 60s or 2:00" onchange="updateTmplSet(${exId},${idx},'duration',this.value)" style="flex:2;padding:8px 10px;font-size:15px;border-radius:8px"><input type="number" value="${set.weight||''}" placeholder="lbs (opt)" inputmode="decimal" onchange="updateTmplSet(${exId},${idx},'weight',this.value)" style="flex:1;padding:8px 6px;font-size:15px;text-align:center;border-radius:8px">`;
+    }else{
+      inputRow.innerHTML=`<input type="number" value="${set.reps||''}" placeholder="Reps" inputmode="numeric" onchange="updateTmplSet(${exId},${idx},'reps',this.value)" style="flex:1;padding:8px 6px;font-size:15px;text-align:center;border-radius:8px"><div class="bw-tag" style="flex:1">BW</div>`;
+    }
+    row.appendChild(inputRow);
+    container.appendChild(row);
+  });
+}
+
+function updateTmplSet(exId,idx,field,val){const ex=tmplExercises.find(e=>e.id===exId);if(ex&&ex.sets[idx])ex.sets[idx][field]=val;}
+function removeTmplSet(exId,idx){const ex=tmplExercises.find(e=>e.id===exId);if(ex){ex.sets.splice(idx,1);renderTmplSets(exId);}}
+
+function saveTmplBuilder(){
+  const name=document.getElementById('tmpl-builder-name').value.trim();
+  if(!name){showToast('Enter a template name!','#e84848');return;}
+  let tmpl={id:editingTemplateId||Date.now(),name,type:tmplCurrentType};
+  if(tmplCurrentType==='strength'){
+    const valid=tmplExercises.filter(e=>e.name.trim()||e.sets.length>0);
+    if(!valid.length){showToast('Add at least one exercise!','#e84848');return;}
+    tmpl.exercises=valid.map(e=>({name:e.name,sets:e.sets.map(s=>({reps:s.reps,weight:s.weight,duration:s.duration,mode:s.mode||'reps'}))}));
+  }else{tmpl.cardioType=tmplCurrentCardioType;tmpl.ruckWeight=document.getElementById('tmpl-ruck-weight').value;tmpl.notes=document.getElementById('tmpl-cardio-notes').value;}
+  if(editingTemplateId){const idx=templates.findIndex(t=>t.id===editingTemplateId);if(idx>=0)templates[idx]=tmpl;else templates.push(tmpl);}
+  else{const existing=templates.findIndex(t=>t.name.toLowerCase()===name.toLowerCase());if(existing>=0)templates[existing]=tmpl;else templates.push(tmpl);}
+  saveTemplates();
+  refreshTemplateSelects();
+  showToast(editingTemplateId?'Template updated! ✓':'Template saved! 📋');
+  closeTemplateBuilder();
+}
+
+function renderTemplates(){
+  const list=document.getElementById('templates-list');
+  const empty=document.getElementById('templates-empty');
+  list.innerHTML='';
+  if(!templates.length){empty.style.display='block';return;}
+  empty.style.display='none';
+  templates.forEach((tmpl,idx)=>{
+    let detail='';
+    if(tmpl.type==='strength'&&tmpl.exercises){
+      detail=tmpl.exercises.map(e=>{const sc=e.sets?e.sets.length:0;return`${escHtml(e.name)}${sc?' <span style="color:var(--text3)">'+sc+' sets</span>':''}`;}).join('<br>');
+    }else{detail=tmpl.cardioType||'Cardio';if(tmpl.ruckWeight)detail+=' · '+tmpl.ruckWeight+' lb ruck';}
+    const div=document.createElement('div');
+    div.className='template-card';
+    div.innerHTML=`
+      <div class="template-card-header">
+        <div class="template-name">${escHtml(tmpl.name)}</div>
+        <div class="template-badge ${tmpl.type==='strength'?'badge-strength':'badge-cardio'}">${tmpl.type==='strength'?'💪':'🏃'} ${tmpl.type}</div>
+      </div>
+      <div class="template-exercises">${detail}</div>
+      <div class="template-actions">
+        <button class="btn btn-primary btn-sm" onclick="useTemplate(${tmpl.id})" style="flex:2">▶ Start Workout</button>
+        <button class="btn btn-ghost btn-sm" onclick="openTemplateBuilder(${tmpl.id})" style="flex:1">Edit</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteTemplate(${idx},event)" style="flex:1">Del</button>
+      </div>`;
+    list.appendChild(div);
+  });
+}
+
+function useTemplate(id){
+  const tmpl=templates.find(t=>t.id===id);if(!tmpl)return;
+  showScreen('log',document.querySelector('.nav-btn'));
+  if(tmpl.type==='strength'){
+    selectWorkoutType('strength',document.querySelectorAll('.type-tab')[0]);
+    exercises=(tmpl.exercises||[]).map(e=>({id:Date.now()+Math.random(),name:e.name,sets:(e.sets||[]).map(s=>({reps:s.reps,weight:s.weight,duration:s.duration,mode:s.mode||'reps'}))}));
+    renderExercises();
+  }else{
+    selectWorkoutType('cardio',document.querySelectorAll('.type-tab')[1]);
+    currentCardioType=tmpl.cardioType||'Rucking';
+    document.querySelectorAll('#cardio-form .cpill').forEach(p=>p.classList.toggle('active',p.textContent.includes(currentCardioType)));
+    document.getElementById('ruck-extras').style.display=currentCardioType==='Rucking'?'block':'none';
+    if(tmpl.ruckWeight)document.getElementById('ruck-weight').value=tmpl.ruckWeight;
+    if(tmpl.notes)document.getElementById('cardio-notes').value=tmpl.notes;
+  }
+  showToast('Loaded "'+tmpl.name+'" — go! 💪');
+}
+
+function deleteTemplate(idx,e){
+  e.stopPropagation();
+  if(confirm('Delete this template?')){templates.splice(idx,1);saveTemplates();refreshTemplateSelects();renderTemplates();}
+}
+
+function renderHistory(){
+  const container=document.getElementById('history-list');
+  if(!workouts.length){container.innerHTML='<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-text">No workouts yet</div></div>';return;}
+  container.innerHTML='';
+  workouts.forEach((w,idx)=>{
+    const date=new Date(w.date);
+    const dateStr=date.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+    const timeStr=date.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+    let title='',statsHtml='',detailHtml='';
+    if(w.type==='strength'){
+      title=w.exercises?.length?w.exercises.map(e=>e.name||'Exercise').join(' · '):'Strength Session';
+      const totalSets=w.exercises?.reduce((a,e)=>a+(e.sets?.length||0),0)||0;
+      statsHtml=`<div class="history-stats"><div><div class="hstat-val">${w.exercises?.length||0}</div><div class="hstat-label">Exercises</div></div><div><div class="hstat-val">${totalSets}</div><div class="hstat-label">Sets</div></div></div>`;
+    }else{
+      title=w.cardioType||'Cardio';
+      statsHtml=`<div class="history-stats">${w.duration?`<div><div class="hstat-val">${w.duration}</div><div class="hstat-label">Duration</div></div>`:''}${w.distance?`<div><div class="hstat-val">${w.distance}</div><div class="hstat-label">Distance</div></div>`:''}${w.hr?`<div><div class="hstat-val">${w.hr}</div><div class="hstat-label">Avg HR</div></div>`:''}${w.ruckWeight&&w.cardioType==='Rucking'?`<div><div class="hstat-val">${w.ruckWeight}lb</div><div class="hstat-label">Ruck Wt</div></div>`:''}</div>`;
+    }
+    if(w.notes)detailHtml=`<div class="history-detail">${escHtml(w.notes)}</div>`;
+    const div=document.createElement('div');
+    div.className='history-entry';
+    div.innerHTML=`
+      <div class="history-entry-header">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px">
+          <div class="history-date">${dateStr} · ${timeStr}</div>
+          <div class="template-badge ${w.type==='strength'?'badge-strength':'badge-cardio'}">${w.type==='strength'?'💪':'🏃'} ${w.type}</div>
+        </div>
+        <div class="history-workout-name">${escHtml(title.substring(0,60))}${title.length>60?'…':''}</div>
+      </div>
+      ${statsHtml}${detailHtml}
+      <div style="padding:0 14px 12px;display:flex;gap:8px">
+        <button class="btn btn-purple btn-sm" onclick="reuseWorkout(${idx})">↩ Use Again</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteWorkout(${idx},event)">Delete</button>
+      </div>`;
+    container.appendChild(div);
+  });
+}
+
+function reuseWorkout(idx){
+  const w=workouts[idx];
+  showScreen('log',document.querySelector('.nav-btn'));
+  if(w.type==='strength'){
+    selectWorkoutType('strength',document.querySelectorAll('.type-tab')[0]);
+    exercises=(w.exercises||[]).map(e=>({id:Date.now()+Math.random(),name:e.name,sets:(e.sets||[]).map(s=>({reps:s.reps,weight:s.weight,duration:s.duration,mode:s.mode||'reps'}))}));
+    renderExercises();
+  }else{
+    selectWorkoutType('cardio',document.querySelectorAll('.type-tab')[1]);
+    currentCardioType=w.cardioType||'Rucking';
+    document.querySelectorAll('#cardio-form .cpill').forEach(p=>p.classList.toggle('active',p.textContent.includes(currentCardioType)));
+    document.getElementById('ruck-extras').style.display=currentCardioType==='Rucking'?'block':'none';
+    if(w.ruckWeight)document.getElementById('ruck-weight').value=w.ruckWeight;
+  }
+  showToast('Loaded — update and save! ✓');
+}
+
+function deleteWorkout(idx,e){
+  e.stopPropagation();
+  if(confirm('Delete this workout?')){workouts.splice(idx,1);saveWorkouts();renderHistory();}
+}
+
+function renderStats(){
+  const total=workouts.length;
+  const strength=workouts.filter(w=>w.type==='strength').length;
+  const cardio=workouts.filter(w=>w.type==='cardio').length;
+  let streak=0;
+  const today=new Date();today.setHours(0,0,0,0);
+  const days=[...new Set(workouts.map(w=>{const d=new Date(w.date);d.setHours(0,0,0,0);return d.getTime();}))].sort((a,b)=>b-a);
+  if(days.length&&days[0]>=today.getTime()-86400000){let check=today.getTime();for(const day of days){if(day===check||day===check-86400000){streak++;check=day-86400000;}else break;}}
+  document.getElementById('stat-total').textContent=total;
+  document.getElementById('stat-strength').textContent=strength;
+  document.getElementById('stat-cardio').textContent=cardio;
+  document.getElementById('stat-streak').textContent=streak+(streak===1?' day':' days');
+  const recent=document.getElementById('stats-recent-list');
+  if(!workouts.length){recent.innerHTML='<div class="empty-state"><div class="empty-icon">📊</div><div class="empty-text">No data yet</div></div>';return;}
+  recent.innerHTML=workouts.slice(0,5).map(w=>{
+    const d=new Date(w.date);
+    const label=w.type==='strength'?(w.exercises?.map(e=>e.name||'Exercise').join(', ')||'Strength'):`${w.cardioType||'Cardio'}${w.distance?' · '+w.distance:''}${w.duration?' · '+w.duration:''}`;
+    return`<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin:0 16px 8px;display:flex;align-items:center;justify-content:space-between"><div><div style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:800">${escHtml(label.substring(0,48))}${label.length>48?'…':''}</div><div style="font-size:12px;color:var(--text3);margin-top:2px">${d.toLocaleDateString('en-US',{month:'short',day:'numeric',weekday:'short'})}</div></div><div class="template-badge ${w.type==='strength'?'badge-strength':'badge-cardio'}">${w.type}</div></div>`;
+  }).join('');
+}
+
+function confirmClear(){
+  if(confirm('Delete ALL workouts and templates? Cannot be undone.')){
+    workouts=[];templates=[];
+    saveWorkouts();saveTemplates();
+    refreshTemplateSelects();showToast('All data cleared','#e84848');renderStats();
+  }
+}
+
+function startTimer(s){
+  stopTimer();timerSeconds=s;updateTimerDisplay();
+  document.getElementById('restTimer').classList.add('visible');
+  timerInterval=setInterval(()=>{timerSeconds--;updateTimerDisplay();if(timerSeconds<=0){stopTimer();showToast('Rest done! 💪','var(--accent)');}},1000);
+}
+function stopTimer(){if(timerInterval)clearInterval(timerInterval);timerInterval=null;document.getElementById('restTimer').classList.remove('visible');}
+function updateTimerDisplay(){const m=Math.floor(timerSeconds/60),s=timerSeconds%60;document.getElementById('timerDisplay').textContent=m+':'+String(s).padStart(2,'0');}
+
+function openModal(id){document.getElementById(id).classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+function escHtml(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function showToast(msg,color='var(--green)'){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.style.background=color;t.style.color= (color==='var(--green)'||color==='var(--accent)') ? '#ffffff' : '#ffffff';
+  t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200);
+}
+
+init();
+</script>
+
+</body>
+</html>

@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -131,13 +130,21 @@
 </div>
 
 <!-- LOG -->
-
 <div class="screen active" id="screen-log">
   <div class="page-header">
     <div class="page-title">LOG <span>WORKOUT</span></div>
-    <div style="display:flex;align-items:center;gap:8px;margin-top:10px">
-      <input type="datetime-local" id="workout-date" style="flex:1;font-size:14px;padding:9px 12px;color:var(--text2)">
-      <button onclick="resetWorkoutDate()" style="background:none;border:1.5px solid var(--border);border-radius:8px;color:var(--text3);font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;padding:9px 10px;cursor:pointer;white-space:nowrap">Now</button>
+    <div style="margin-top:10px;display:flex;flex-direction:column;gap:6px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3);width:36px;flex-shrink:0">Start</div>
+        <input type="datetime-local" id="workout-start" style="flex:1;font-size:14px;padding:9px 12px;color:var(--input-text)" oninput="updateDurationDisplay()">
+        <button onclick="setNow('workout-start')" style="background:none;border:1.5px solid var(--border);border-radius:8px;color:var(--text3);font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;padding:9px 10px;cursor:pointer;white-space:nowrap">Now</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3);width:36px;flex-shrink:0">End</div>
+        <input type="datetime-local" id="workout-end" style="flex:1;font-size:14px;padding:9px 12px;color:var(--input-text)" oninput="updateDurationDisplay()">
+        <button onclick="setNow('workout-end')" style="background:none;border:1.5px solid var(--border);border-radius:8px;color:var(--text3);font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;padding:9px 10px;cursor:pointer;white-space:nowrap">Now</button>
+      </div>
+      <div id="workout-duration-display" style="font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;color:var(--accent);letter-spacing:0.05em;padding-left:44px;display:none"></div>
     </div>
   </div>
   <div class="type-tabs">
@@ -193,7 +200,6 @@
 </div>
 
 <!-- TEMPLATES -->
-
 <div class="screen" id="screen-templates">
   <div id="tmpl-list-view">
     <div class="page-header">
@@ -257,14 +263,12 @@
 </div>
 
 <!-- HISTORY -->
-
 <div class="screen" id="screen-history">
   <div class="page-header"><div class="page-title">WORK <span>HISTORY</span></div></div>
   <div id="history-list"></div>
 </div>
 
 <!-- STATS -->
-
 <div class="screen" id="screen-stats">
   <div class="page-header"><div class="page-title">MY <span>STATS</span></div></div>
   <div class="section-label">ALL TIME</div>
@@ -350,12 +354,58 @@ function init(){
   resetWorkoutDate();
   addExercise();
   refreshTemplateSelects();
+  requestWakeLock();
+}
+
+// ─── WAKE LOCK: keep screen on while app is open ─────────────
+let wakeLock=null;
+async function requestWakeLock(){
+  if(!('wakeLock' in navigator)) return;
+  try{
+    wakeLock=await navigator.wakeLock.request('screen');
+    // Re-acquire if released (e.g. tab goes to background then returns)
+    document.addEventListener('visibilitychange',async()=>{
+      if(document.visibilityState==='visible'&&wakeLock===null){
+        try{ wakeLock=await navigator.wakeLock.request('screen'); }catch(e){}
+      }
+    });
+  }catch(e){}
+}
+
+function toLocalInputVal(date){
+  const local=new Date(date.getTime()-date.getTimezoneOffset()*60000);
+  return local.toISOString().slice(0,16);
+}
+
+function setNow(fieldId){
+  document.getElementById(fieldId).value=toLocalInputVal(new Date());
+  updateDurationDisplay();
 }
 
 function resetWorkoutDate(){
-  const now=new Date();
-  const local=new Date(now.getTime()-now.getTimezoneOffset()*60000);
-  document.getElementById('workout-date').value=local.toISOString().slice(0,16);
+  const now=toLocalInputVal(new Date());
+  document.getElementById('workout-start').value=now;
+  document.getElementById('workout-end').value='';
+  updateDurationDisplay();
+}
+
+function updateDurationDisplay(){
+  const startVal=document.getElementById('workout-start').value;
+  const endVal=document.getElementById('workout-end').value;
+  const display=document.getElementById('workout-duration-display');
+  if(startVal&&endVal){
+    const diff=new Date(endVal)-new Date(startVal);
+    if(diff>0){
+      const mins=Math.floor(diff/60000);
+      const hrs=Math.floor(mins/60);
+      const rem=mins%60;
+      const str=hrs>0?`${hrs}h ${rem}m`:`${mins}m`;
+      display.textContent='Total: '+str;
+      display.style.display='block';
+      return;
+    }
+  }
+  display.style.display='none';
 }
 
 function showScreen(name,btn){
@@ -499,9 +549,13 @@ function setMode(exId,idx,mode,scope){
 }
 
 function saveWorkout(){
-  const dateVal=document.getElementById('workout-date').value;
-  const date=dateVal?new Date(dateVal):new Date();
-  let w={id:Date.now(),date:date.toISOString(),type:currentType};
+  const startVal=document.getElementById('workout-start').value;
+  const endVal=document.getElementById('workout-end').value;
+  const startDate=startVal?new Date(startVal):new Date();
+  const endDate=endVal?new Date(endVal):null;
+  let totalMins=null;
+  if(endDate&&endDate>startDate) totalMins=Math.round((endDate-startDate)/60000);
+  let w={id:Date.now(),date:startDate.toISOString(),endDate:endDate?endDate.toISOString():null,totalMins,type:currentType};
   if(currentType==='strength'){
     const valid=exercises.filter(e=>e.name.trim()||e.sets.length>0);
     if(!valid.length){showToast('Add at least one exercise!','#e84848');return;}
@@ -526,6 +580,8 @@ function saveWorkout(){
 function resetLog(){
   exercises=[];
   resetWorkoutDate();
+  document.getElementById('workout-end').value='';
+  document.getElementById('workout-duration-display').style.display='none';
   ['strength-notes','cardio-duration','cardio-distance','cardio-hr','cardio-elevation','ruck-weight','cardio-notes'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   addExercise();
 }
@@ -794,7 +850,12 @@ function renderHistory(){
   workouts.forEach((w,idx)=>{
     const date=new Date(w.date);
     const dateStr=date.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
-    const timeStr=date.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+    const startTimeStr=date.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+    const endTimeStr=w.endDate?new Date(w.endDate).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}):null;
+    const totalStr=w.totalMins?(w.totalMins>=60?Math.floor(w.totalMins/60)+'h '+(w.totalMins%60)+'m':w.totalMins+'m'):null;
+    const timeDisplay=endTimeStr
+      ? `${dateStr} · ${startTimeStr}–${endTimeStr}${totalStr?' · '+totalStr:''}`
+      : `${dateStr} · ${startTimeStr}`;
     let title='',statsHtml='',detailHtml='';
     if(w.type==='strength'){
       title=w.exercises?.length?w.exercises.map(e=>e.name||'Exercise').join(' · '):'Strength Session';
@@ -810,7 +871,7 @@ function renderHistory(){
     div.innerHTML=`
       <div class="history-entry-header">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px">
-          <div class="history-date">${dateStr} · ${timeStr}</div>
+          <div class="history-date">${timeDisplay}</div>
           <div class="template-badge ${w.type==='strength'?'badge-strength':'badge-cardio'}">${w.type==='strength'?'💪':'🏃'} ${w.type}</div>
         </div>
         <div class="history-workout-name">${escHtml(title.substring(0,60))}${title.length>60?'…':''}</div>
@@ -894,6 +955,5 @@ function showToast(msg,color='var(--green)'){
 
 init();
 </script>
-
 </body>
 </html>

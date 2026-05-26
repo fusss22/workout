@@ -181,8 +181,12 @@
     </div>
     <div style="padding:0 16px">
       <div class="input-row">
-        <div class="input-group"><div class="input-label">Duration</div><input type="text" id="cardio-duration" placeholder="45 min"></div>
-        <div class="input-group"><div class="input-label">Distance</div><input type="text" id="cardio-distance" placeholder="5.0 mi" inputmode="decimal"></div>
+        <div class="input-group"><div class="input-label">Duration</div><input type="text" id="cardio-duration" placeholder="45 min" oninput="updateCardioMPH()"></div>
+        <div class="input-group"><div class="input-label">Distance (miles)</div><input type="number" id="cardio-distance" placeholder="5.0" inputmode="decimal" step="0.01" oninput="updateCardioMPH()"></div>
+      </div>
+      <div class="input-group">
+        <div class="input-label">Avg Speed (mph)</div>
+        <input type="text" id="cardio-mph" placeholder="Auto-calculated or enter manually" readonly style="background:var(--surface2);color:var(--accent);font-weight:600;cursor:default">
       </div>
       <div class="input-row">
         <div class="input-group"><div class="input-label">Avg HR (bpm)</div><input type="number" id="cardio-hr" placeholder="145" inputmode="numeric"></div>
@@ -389,6 +393,43 @@ function resetWorkoutDate(){
   updateDurationDisplay();
 }
 
+function updateCardioMPH(){
+  const miles=parseFloat(document.getElementById('cardio-distance').value);
+  const mphField=document.getElementById('cardio-mph');
+  if(!miles||!mphField){return;}
+
+  // Try start/end times first
+  const startVal=document.getElementById('workout-start').value;
+  const endVal=document.getElementById('workout-end').value;
+  if(startVal&&endVal){
+    const mins=(new Date(endVal)-new Date(startVal))/60000;
+    if(mins>0){
+      mphField.value=(miles/(mins/60)).toFixed(2)+' mph';
+      return;
+    }
+  }
+
+  // Fallback: parse duration text field (e.g. "45 min", "1:30", "90")
+  const durText=document.getElementById('cardio-duration').value.trim();
+  let mins=null;
+  if(durText){
+    const colonMatch=durText.match(/^(\d+):(\d+)$/);
+    const minMatch=durText.match(/(\d+\.?\d*)\s*m/i);
+    const hrMatch=durText.match(/(\d+\.?\d*)\s*h/i);
+    if(colonMatch) mins=parseInt(colonMatch[1])*60+parseInt(colonMatch[2]);
+    else if(hrMatch||minMatch){
+      mins=0;
+      if(hrMatch) mins+=parseFloat(hrMatch[1])*60;
+      if(minMatch) mins+=parseFloat(minMatch[1]);
+    } else if(/^\d+\.?\d*$/.test(durText)) mins=parseFloat(durText);
+  }
+  if(mins&&mins>0){
+    mphField.value=(miles/(mins/60)).toFixed(2)+' mph';
+  } else {
+    mphField.value='';
+  }
+}
+
 function updateDurationDisplay(){
   const startVal=document.getElementById('workout-start').value;
   const endVal=document.getElementById('workout-end').value;
@@ -402,10 +443,12 @@ function updateDurationDisplay(){
       const str=hrs>0?`${hrs}h ${rem}m`:`${mins}m`;
       display.textContent='Total: '+str;
       display.style.display='block';
+      updateCardioMPH();
       return;
     }
   }
   display.style.display='none';
+  updateCardioMPH();
 }
 
 function showScreen(name,btn){
@@ -565,6 +608,9 @@ function saveWorkout(){
     w.cardioType=currentCardioType;
     w.duration=document.getElementById('cardio-duration').value;
     w.distance=document.getElementById('cardio-distance').value;
+    w.miles=parseFloat(document.getElementById('cardio-distance').value)||null;
+    const mphVal=document.getElementById('cardio-mph').value;
+    w.mph=mphVal?parseFloat(mphVal):null;
     w.hr=document.getElementById('cardio-hr').value;
     w.elevation=document.getElementById('cardio-elevation').value;
     w.ruckWeight=document.getElementById('ruck-weight').value;
@@ -582,6 +628,8 @@ function resetLog(){
   resetWorkoutDate();
   document.getElementById('workout-end').value='';
   document.getElementById('workout-duration-display').style.display='none';
+  const mphField=document.getElementById('cardio-mph');
+  if(mphField) mphField.value='';
   ['strength-notes','cardio-duration','cardio-distance','cardio-hr','cardio-elevation','ruck-weight','cardio-notes'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   addExercise();
 }
@@ -863,7 +911,7 @@ function renderHistory(){
       statsHtml=`<div class="history-stats"><div><div class="hstat-val">${w.exercises?.length||0}</div><div class="hstat-label">Exercises</div></div><div><div class="hstat-val">${totalSets}</div><div class="hstat-label">Sets</div></div></div>`;
     }else{
       title=w.cardioType||'Cardio';
-      statsHtml=`<div class="history-stats">${w.duration?`<div><div class="hstat-val">${w.duration}</div><div class="hstat-label">Duration</div></div>`:''}${w.distance?`<div><div class="hstat-val">${w.distance}</div><div class="hstat-label">Distance</div></div>`:''}${w.hr?`<div><div class="hstat-val">${w.hr}</div><div class="hstat-label">Avg HR</div></div>`:''}${w.ruckWeight&&w.cardioType==='Rucking'?`<div><div class="hstat-val">${w.ruckWeight}lb</div><div class="hstat-label">Ruck Wt</div></div>`:''}</div>`;
+      statsHtml=`<div class="history-stats">${w.duration?`<div><div class="hstat-val">${w.duration}</div><div class="hstat-label">Duration</div></div>`:''}${w.miles?`<div><div class="hstat-val">${w.miles} mi</div><div class="hstat-label">Distance</div></div>`:w.distance?`<div><div class="hstat-val">${w.distance}</div><div class="hstat-label">Distance</div></div>`:''}${w.mph?`<div><div class="hstat-val">${w.mph} mph</div><div class="hstat-label">Avg Speed</div></div>`:''}${w.hr?`<div><div class="hstat-val">${w.hr}</div><div class="hstat-label">Avg HR</div></div>`:''}${w.ruckWeight&&w.cardioType==='Rucking'?`<div><div class="hstat-val">${w.ruckWeight}lb</div><div class="hstat-label">Ruck Wt</div></div>`:''}</div>`;
     }
     if(w.notes)detailHtml=`<div class="history-detail">${escHtml(w.notes)}</div>`;
     const div=document.createElement('div');

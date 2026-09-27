@@ -1287,18 +1287,26 @@ function renderExPicker(){
   });
   const picker=document.getElementById('ex-picker');
   if(!names.size){picker.innerHTML='<div style="color:var(--text3);font-family:\'Barlow Condensed\',sans-serif;font-size:13px;padding-bottom:8px">No weight data yet</div>';return;}
-  picker.innerHTML=[...names].map(n=>`<button class="ex-chip${selectedExercise===n?' active':''}" onclick="selectExercise(${JSON.stringify(n)})">${escHtml(n)}</button>`).join('');
+  picker.innerHTML=[...names].map(n=>`<button class="ex-chip${selectedExercise===n?' active':''}" data-name="${escHtml(n)}" onclick="selectExercise(${JSON.stringify(n)})">${escHtml(n)}</button>`).join('');
   if(selectedExercise&&names.has(selectedExercise))renderExTrend(selectedExercise);
   else document.getElementById('ex-trend-wrap').style.display='none';
 }
 
 function selectExercise(name){
   selectedExercise=name;
-  document.querySelectorAll('.ex-chip').forEach(c=>c.classList.toggle('active',c.textContent===name));
+  document.querySelectorAll('.ex-chip').forEach(c=>c.classList.toggle('active',c.getAttribute('data-name')===name));
   renderExTrend(name);
 }
 
 function renderExTrend(name){
+  try{ _renderExTrend(name); }catch(err){
+    const svg=document.getElementById('ex-trend-svg');
+    const wrap=document.getElementById('ex-trend-wrap');
+    wrap.style.display='block';
+    svg.innerHTML=`<text x="160" y="48" text-anchor="middle" fill="#e84848" font-size="10" font-family="Barlow Condensed,sans-serif">Error: ${escHtml(err.message)}</text>`;
+  }
+}
+function _renderExTrend(name){
   const points=[];
   // Determine if this exercise is primarily BW
   let isBW=false;

@@ -355,7 +355,7 @@
   <div class="ex-picker" id="ex-picker"></div>
   <div class="chart-wrap" id="ex-trend-wrap" style="display:none">
     <div class="chart-title" id="ex-trend-title"></div>
-    <svg class="line-chart-svg" id="ex-trend-svg" viewBox="0 0 320 90" preserveAspectRatio="none"></svg>
+    <svg id="ex-trend-svg" viewBox="0 0 320 80" preserveAspectRatio="xMidYMid meet" style="width:100%;height:100px;display:block;overflow:visible"></svg>
     <div style="display:flex;justify-content:space-between;margin-top:4px" id="ex-trend-labels"></div>
   </div>
 
@@ -1348,7 +1348,6 @@ function renderExTrend(name){
     const anchor=i===0?'start':i===points.length-1?'end':'middle';
     return`<text x="${x}" y="${y}" text-anchor="${anchor}" fill="#6b8fd4" font-size="9" font-family="Barlow Condensed,sans-serif" font-weight="700">${p.wt}${unit}</text>`;
   }).filter((_,i)=>i===0||i===points.length-1).join('');
-  svg.setAttribute('viewBox',`0 0 ${W} ${H}`);
   svg.innerHTML=`
     <defs><linearGradient id="ag" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#6b8fd4" stop-opacity="0.18"/><stop offset="100%" stop-color="#6b8fd4" stop-opacity="0"/></linearGradient></defs>
     <path d="${areaD}" fill="url(#ag)"/>

@@ -1292,16 +1292,20 @@ function renderExPicker(){
     const btn=document.createElement('button');
     btn.className='ex-chip'+(selectedExercise===n?' active':'');
     btn.textContent=n;
-    btn.addEventListener('click',()=>selectExercise(n));
+    btn.setAttribute('data-exname',n);
     picker.appendChild(btn);
   });
+  picker.onclick=function(e){
+    const btn=e.target.closest('.ex-chip');
+    if(btn)selectExercise(btn.getAttribute('data-exname'));
+  };
   if(selectedExercise&&names.has(selectedExercise))renderExTrend(selectedExercise);
   else document.getElementById('ex-trend-wrap').style.display='none';
 }
 
 function selectExercise(name){
   selectedExercise=name;
-  document.querySelectorAll('.ex-chip').forEach(c=>c.classList.toggle('active',c.getAttribute('data-name')===name));
+  document.querySelectorAll('.ex-chip').forEach(c=>c.classList.toggle('active',c.getAttribute('data-exname')===name));
   renderExTrend(name);
 }
 

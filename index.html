@@ -89,6 +89,27 @@
   .stat-tile-val { font-family: 'Barlow Condensed', sans-serif; font-size: 32px; font-weight: 900; line-height: 1; color: var(--text); }
   .stat-tile-val.accent { color: var(--accent); }
   .stat-tile-label { font-family: 'Barlow Condensed', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text3); margin-top: 4px; }
+  .stats-period-tabs { display: flex; gap: 6px; padding: 4px 16px 12px; }
+  .stats-period-tab { flex: 1; padding: 8px 4px; border: 1.5px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--text2); font-family: 'Barlow Condensed', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; cursor: pointer; text-align: center; transition: all 0.15s; }
+  .stats-period-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .chart-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin: 0 16px 10px; padding: 14px 14px 10px; box-shadow: 0 2px 8px rgba(107,143,212,0.08); }
+  .chart-title { font-family: 'Barlow Condensed', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text3); margin-bottom: 10px; }
+  .bar-chart { display: flex; align-items: flex-end; gap: 4px; height: 80px; }
+  .bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+  .bar-fill { width: 100%; border-radius: 4px 4px 0 0; background: var(--accent); opacity: 0.75; transition: height 0.3s ease; min-height: 2px; }
+  .bar-fill.zero { background: var(--border); opacity: 1; min-height: 3px; }
+  .bar-label { font-family: 'Barlow Condensed', sans-serif; font-size: 9px; font-weight: 700; color: var(--text3); letter-spacing: 0.04em; text-transform: uppercase; white-space: nowrap; }
+  .bar-count { font-family: 'Barlow Condensed', sans-serif; font-size: 10px; font-weight: 900; color: var(--accent); }
+  .bar-count.zero { color: var(--text3); }
+  .line-chart-svg { width: 100%; height: 90px; overflow: visible; }
+  .pr-list { padding: 0 16px 4px; }
+  .pr-row { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 11px 14px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 8px rgba(107,143,212,0.06); }
+  .pr-name { font-family: 'Barlow Condensed', sans-serif; font-size: 16px; font-weight: 800; color: var(--text); }
+  .pr-val { font-family: 'Barlow Condensed', sans-serif; font-size: 20px; font-weight: 900; color: var(--accent); }
+  .pr-sub { font-size: 11px; color: var(--text3); margin-top: 1px; }
+  .ex-picker { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 16px 10px; }
+  .ex-chip { padding: 6px 12px; border: 1.5px solid var(--border); border-radius: 20px; background: var(--surface); color: var(--text2); font-family: 'Barlow Condensed', sans-serif; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.12s; }
+  .ex-chip.active { background: var(--accent); color: #fff; border-color: var(--accent); }
   .modal-overlay { display: none; position: fixed; inset: 0; z-index: 300; background: rgba(26,30,46,0.5); backdrop-filter: blur(4px); align-items: flex-end; justify-content: center; }
   .modal-overlay.open { display: flex; }
   .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 20px 20px 0 0; padding: 20px 20px calc(20px + var(--safe-bottom)); width: 100%; max-width: 430px; animation: slideUp 0.25s cubic-bezier(0.34,1.56,0.64,1); }
@@ -116,6 +137,15 @@
 <div class="rest-timer" id="restTimer">
   <div><div class="timer-label">Rest Timer</div><span id="timerDisplay">1:30</span></div>
   <button class="timer-stop" onclick="stopTimer()">✕</button>
+</div>
+
+<div class="modal-overlay" id="updateTemplateModal">
+  <div class="modal">
+    <div class="modal-title">Update Template?</div>
+    <div style="color:var(--text2);font-size:15px;margin-bottom:16px;line-height:1.4" id="updateTemplateModalMsg"></div>
+    <button class="btn btn-primary" onclick="confirmUpdateTemplate()">Yes, Update It</button>
+    <button class="btn btn-ghost" onclick="closeModal('updateTemplateModal');showToast('Workout Saved! 🔥');resetLog()">No, Keep Original</button>
+  </div>
 </div>
 
 <div class="modal-overlay" id="saveTemplateModal">
@@ -207,7 +237,7 @@
       </div>
       <div id="ruck-extras" class="input-group">
         <div class="input-label">Ruck Weight (lbs)</div>
-        <input type="number" id="ruck-weight" placeholder="30" inputmode="numeric">
+        <input type="number" id="ruck-weight" value="20" placeholder="20" inputmode="numeric">
       </div>
       <textarea id="cardio-notes" placeholder="Route, conditions, how you felt…" rows="2" style="resize:none;font-size:15px;padding:11px 14px;margin-bottom:8px;width:100%"></textarea>
       <button class="btn btn-primary" onclick="saveWorkout()">SAVE WORKOUT</button>
@@ -263,7 +293,7 @@
       <div style="padding:0 16px">
         <div id="tmpl-ruck-extras" class="input-group">
           <div class="input-label">Default Ruck Weight (lbs)</div>
-          <input type="number" id="tmpl-ruck-weight" placeholder="30" inputmode="numeric">
+          <input type="number" id="tmpl-ruck-weight" value="20" placeholder="20" inputmode="numeric">
         </div>
         <div class="input-group">
           <div class="input-label">Notes / Route Description</div>
@@ -288,17 +318,49 @@
 <!-- STATS -->
 <div class="screen" id="screen-stats">
   <div class="page-header"><div class="page-title">MY <span>STATS</span></div></div>
-  <div class="section-label">ALL TIME</div>
-  <div class="stats-grid">
-    <div class="stat-tile"><div class="stat-tile-val accent" id="stat-total"></div><div class="stat-tile-label">Total Workouts</div></div>
-    <div class="stat-tile"><div class="stat-tile-val" id="stat-streak"></div><div class="stat-tile-label">Day Streak</div></div>
-    <div class="stat-tile"><div class="stat-tile-val" id="stat-strength"></div><div class="stat-tile-label">Strength Sessions</div></div>
-    <div class="stat-tile"><div class="stat-tile-val" id="stat-cardio"></div><div class="stat-tile-label">Cardio Sessions</div></div>
+
+  <!-- Period tabs -->
+  <div class="stats-period-tabs">
+    <button class="stats-period-tab active" onclick="setStatsPeriod('week',this)">This Week</button>
+    <button class="stats-period-tab" onclick="setStatsPeriod('month',this)">This Month</button>
+    <button class="stats-period-tab" onclick="setStatsPeriod('all',this)">All Time</button>
   </div>
-  <div class="section-label" style="margin-top:4px">RECENT</div>
-  <div id="stats-recent-list"></div>
-  <div class="divider"></div>
-  <div style="padding:0 16px"><button class="btn btn-danger" onclick="confirmClear()">Clear All Data</button></div>
+
+  <!-- Summary tiles -->
+  <div class="stats-grid">
+    <div class="stat-tile"><div class="stat-tile-val accent" id="stat-total"></div><div class="stat-tile-label">Workouts</div></div>
+    <div class="stat-tile"><div class="stat-tile-val" id="stat-streak"></div><div class="stat-tile-label">Day Streak</div></div>
+    <div class="stat-tile"><div class="stat-tile-val" id="stat-strength"></div><div class="stat-tile-label">Strength</div></div>
+    <div class="stat-tile"><div class="stat-tile-val" id="stat-cardio"></div><div class="stat-tile-label">Cardio</div></div>
+  </div>
+
+  <!-- Weekly consistency bar chart -->
+  <div class="chart-wrap">
+    <div class="chart-title">Weekly Consistency (last 8 weeks)</div>
+    <div class="bar-chart" id="weekly-bar-chart"></div>
+  </div>
+
+  <!-- Cardio breakdown -->
+  <div id="cardio-breakdown-wrap">
+    <div class="section-label">CARDIO BREAKDOWN</div>
+    <div id="cardio-breakdown"></div>
+  </div>
+
+  <!-- Personal Records -->
+  <div class="section-label" style="margin-top:4px">PERSONAL RECORDS</div>
+  <div class="pr-list" id="pr-list"></div>
+
+  <!-- Exercise trend -->
+  <div class="section-label" style="margin-top:4px">EXERCISE TRENDS</div>
+  <div class="ex-picker" id="ex-picker"></div>
+  <div class="chart-wrap" id="ex-trend-wrap" style="display:none">
+    <div class="chart-title" id="ex-trend-title"></div>
+    <svg class="line-chart-svg" id="ex-trend-svg" viewBox="0 0 320 90" preserveAspectRatio="none"></svg>
+    <div style="display:flex;justify-content:space-between;margin-top:4px" id="ex-trend-labels"></div>
+  </div>
+
+  <div class="divider" style="margin-top:12px"></div>
+  <div style="padding:0 16px 8px"><button class="btn btn-danger" onclick="confirmClear()">Clear All Data</button></div>
 </div>
 
 <nav class="nav-bar">
@@ -314,6 +376,7 @@ let currentType='strength',currentCardioType='Rucking';
 let exercises=[],tmplExercises=[];
 let tmplCurrentType='strength',tmplCurrentCardioType='Rucking';
 let editingTemplateId=null;
+let loadedTemplateId=null;
 let timerInterval=null,timerSeconds=0;
 
 // ─── STORAGE: write to localStorage AND cookies for max iOS persistence ───
@@ -725,18 +788,43 @@ function saveWorkout(){
   }
   workouts.unshift(w);
   saveWorkouts();
-  showToast('Workout Saved! 🔥');
+  if(loadedTemplateId){
+    const lt=templates.find(t=>t.id==loadedTemplateId);
+    if(lt){
+      document.getElementById('updateTemplateModalMsg').textContent='Update "'+lt.name+'" with today\'s values (reps, weight, etc.)?';
+      openModal('updateTemplateModal');
+    }else{showToast('Workout Saved! 🔥');resetLog();}
+  }else{showToast('Workout Saved! 🔥');resetLog();}
+}
+
+function confirmUpdateTemplate(){
+  const tmplIdx=templates.findIndex(t=>t.id==loadedTemplateId);
+  if(tmplIdx>=0){
+    const tmpl=templates[tmplIdx];
+    if(currentType==='strength'){
+      tmpl.exercises=exercises.filter(e=>e.name.trim()||e.sets.length>0).map(e=>({name:e.name,sets:e.sets.map(s=>({reps:s.reps,weight:s.weight,duration:s.duration,mode:s.mode||'reps'}))}));
+    }else{
+      tmpl.cardioType=currentCardioType;
+      tmpl.ruckWeight=document.getElementById('ruck-weight').value;
+      tmpl.notes=document.getElementById('cardio-notes').value;
+    }
+    templates[tmplIdx]=tmpl;
+    saveTemplates();
+    showToast('Template updated! 📋');
+  }
+  closeModal('updateTemplateModal');
   resetLog();
 }
 
 function resetLog(){
   exercises=[];
+  loadedTemplateId=null;
   resetWorkoutDate();
   document.getElementById('workout-duration-input').value='';
   document.getElementById('workout-time-summary').style.display='none';
   const mphField=document.getElementById('cardio-mph');
   if(mphField) mphField.value='';
-  ['strength-notes','cardio-duration','cardio-distance','cardio-hr','cardio-elevation','ruck-weight','cardio-notes'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['strength-notes','cardio-duration','cardio-distance','cardio-hr','cardio-elevation','ruck-weight','cardio-notes'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=(id==='ruck-weight'?'20':'');});
   addExercise();
 }
 
@@ -776,6 +864,7 @@ function loadSelectedTemplate(){
   if(!id){showToast('Select a template first','#e84848');return;}
   const tmpl=templates.find(t=>t.id==id);if(!tmpl)return;
   exercises=tmpl.exercises.map(e=>({id:Date.now()+Math.random(),name:e.name,sets:(e.sets||[]).map(s=>({reps:s.reps,weight:s.weight,duration:s.duration,mode:s.mode||'reps'}))}));
+  loadedTemplateId=tmpl.id;
   renderExercises();showToast('Loaded "'+tmpl.name+'" ✓');
 }
 
@@ -788,13 +877,14 @@ function loadSelectedCardioTemplate(){
   document.getElementById('ruck-extras').style.display=currentCardioType==='Rucking'?'block':'none';
   if(tmpl.ruckWeight)document.getElementById('ruck-weight').value=tmpl.ruckWeight;
   if(tmpl.notes)document.getElementById('cardio-notes').value=tmpl.notes;
+  loadedTemplateId=tmpl.id;
   showToast('Loaded "'+tmpl.name+'" ✓');
 }
 
 function openTemplateBuilder(tmplId){
   tmplExercises=[];tmplCurrentType='strength';tmplCurrentCardioType='Rucking';editingTemplateId=tmplId;
   document.getElementById('tmpl-builder-name').value='';
-  document.getElementById('tmpl-ruck-weight').value='';
+  document.getElementById('tmpl-ruck-weight').value='20';
   document.getElementById('tmpl-cardio-notes').value='';
   document.getElementById('tmpl-builder-mode-label').textContent=tmplId?'EDIT TEMPLATE':'NEW TEMPLATE';
   document.getElementById('tmpl-tab-strength').classList.add('active');
@@ -1061,25 +1151,180 @@ function deleteWorkout(idx,e){
   if(confirm('Delete this workout?')){workouts.splice(idx,1);saveWorkouts();renderHistory();}
 }
 
+let statsPeriod='week';
+let selectedExercise=null;
+
+function setStatsPeriod(period,btn){
+  statsPeriod=period;
+  document.querySelectorAll('.stats-period-tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderStats();
+}
+
+function getFilteredWorkouts(){
+  const now=new Date();
+  if(statsPeriod==='week'){
+    const start=new Date(now);start.setHours(0,0,0,0);start.setDate(start.getDate()-start.getDay());
+    return workouts.filter(w=>new Date(w.date)>=start);
+  }
+  if(statsPeriod==='month'){
+    const start=new Date(now.getFullYear(),now.getMonth(),1);
+    return workouts.filter(w=>new Date(w.date)>=start);
+  }
+  return workouts;
+}
+
 function renderStats(){
-  const total=workouts.length;
-  const strength=workouts.filter(w=>w.type==='strength').length;
-  const cardio=workouts.filter(w=>w.type==='cardio').length;
+  const filtered=getFilteredWorkouts();
+  const total=filtered.length;
+  const strength=filtered.filter(w=>w.type==='strength').length;
+  const cardio=filtered.filter(w=>w.type==='cardio').length;
+
+  // Streak always all-time
   let streak=0;
   const today=new Date();today.setHours(0,0,0,0);
   const days=[...new Set(workouts.map(w=>{const d=new Date(w.date);d.setHours(0,0,0,0);return d.getTime();}))].sort((a,b)=>b-a);
   if(days.length&&days[0]>=today.getTime()-86400000){let check=today.getTime();for(const day of days){if(day===check||day===check-86400000){streak++;check=day-86400000;}else break;}}
+
   document.getElementById('stat-total').textContent=total;
   document.getElementById('stat-strength').textContent=strength;
   document.getElementById('stat-cardio').textContent=cardio;
   document.getElementById('stat-streak').textContent=streak+(streak===1?' day':' days');
-  const recent=document.getElementById('stats-recent-list');
-  if(!workouts.length){recent.innerHTML='<div class="empty-state"><div class="empty-icon">📊</div><div class="empty-text">No data yet</div></div>';return;}
-  recent.innerHTML=workouts.slice(0,5).map(w=>{
-    const d=new Date(w.date);
-    const label=w.type==='strength'?(w.exercises?.map(e=>e.name||'Exercise').join(', ')||'Strength'):`${w.cardioType||'Cardio'}${w.distance?' · '+w.distance:''}${w.duration?' · '+w.duration:''}`;
-    return`<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin:0 16px 8px;display:flex;align-items:center;justify-content:space-between"><div><div style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:800">${escHtml(label.substring(0,48))}${label.length>48?'…':''}</div><div style="font-size:12px;color:var(--text3);margin-top:2px">${d.toLocaleDateString('en-US',{month:'short',day:'numeric',weekday:'short'})}</div></div><div class="template-badge ${w.type==='strength'?'badge-strength':'badge-cardio'}">${w.type}</div></div>`;
+
+  renderWeeklyBarChart();
+  renderCardioBreakdown(filtered);
+  renderPRs();
+  renderExPicker();
+}
+
+function renderWeeklyBarChart(){
+  const container=document.getElementById('weekly-bar-chart');
+  const weeks=[];
+  const now=new Date();now.setHours(0,0,0,0);
+  // Build 8 week buckets, most recent last
+  for(let i=7;i>=0;i--){
+    const weekStart=new Date(now);
+    weekStart.setDate(weekStart.getDate()-weekStart.getDay()-i*7);
+    weekStart.setHours(0,0,0,0);
+    const weekEnd=new Date(weekStart);weekEnd.setDate(weekEnd.getDate()+7);
+    const count=workouts.filter(w=>{const d=new Date(w.date);return d>=weekStart&&d<weekEnd;}).length;
+    const label=(i===0)?'Now':weekStart.toLocaleDateString('en-US',{month:'numeric',day:'numeric'});
+    weeks.push({count,label});
+  }
+  const maxCount=Math.max(...weeks.map(w=>w.count),1);
+  container.innerHTML=weeks.map(w=>{
+    const heightPct=Math.round((w.count/maxCount)*100);
+    return`<div class="bar-col">
+      <div class="bar-count ${w.count===0?'zero':''}">${w.count||''}</div>
+      <div class="bar-fill ${w.count===0?'zero':''}" style="height:${Math.max(heightPct,3)}%"></div>
+      <div class="bar-label">${w.label}</div>
+    </div>`;
   }).join('');
+}
+
+function renderCardioBreakdown(filtered){
+  const cardioWs=filtered.filter(w=>w.type==='cardio');
+  if(!cardioWs.length){document.getElementById('cardio-breakdown-wrap').style.display='none';return;}
+  document.getElementById('cardio-breakdown-wrap').style.display='block';
+  const types={};
+  cardioWs.forEach(w=>{
+    const t=w.cardioType||'Cardio';
+    if(!types[t])types[t]={sessions:0,miles:0,mins:0};
+    types[t].sessions++;
+    types[t].miles+=parseFloat(w.distance)||0;
+    types[t].mins+=parseDurationMins(w.duration)||0;
+  });
+  document.getElementById('cardio-breakdown').innerHTML=Object.entries(types).map(([type,data])=>{
+    const milesStr=data.miles>0?`${data.miles.toFixed(1)} mi`:'';
+    const minsStr=data.mins>0?`${Math.round(data.mins)} min`:'';
+    return`<div class="pr-row"><div><div class="pr-name">${escHtml(type)}</div><div class="pr-sub">${[milesStr,minsStr].filter(Boolean).join(' · ')||'No data'}</div></div><div style="text-align:right"><div class="pr-val">${data.sessions}</div><div class="pr-sub">sessions</div></div></div>`;
+  }).join('');
+  // wrap in pr-list padding
+  document.getElementById('cardio-breakdown').style.cssText='padding:0 16px 4px';
+}
+
+function renderPRs(){
+  // Heaviest weight per exercise across all time
+  const prMap={};
+  workouts.filter(w=>w.type==='strength').forEach(w=>{
+    (w.exercises||[]).forEach(e=>{
+      if(!e.name)return;
+      (e.sets||[]).forEach(s=>{
+        const wt=parseFloat(s.weight);
+        if(s.mode==='bw'){
+          if(!prMap[e.name]||prMap[e.name].val==='BW')prMap[e.name]={val:'BW',date:w.date};
+        } else if(!isNaN(wt)&&wt>0){
+          if(!prMap[e.name]||wt>(prMap[e.name].numVal||0)){prMap[e.name]={val:wt+'lbs',numVal:wt,date:w.date};}
+        }
+      });
+    });
+  });
+  const prEl=document.getElementById('pr-list');
+  const entries=Object.entries(prMap);
+  if(!entries.length){prEl.innerHTML='<div style="padding:0 16px 8px;color:var(--text3);font-family:\'Barlow Condensed\',sans-serif;font-size:14px">Log strength workouts to see PRs</div>';return;}
+  prEl.innerHTML=entries.sort((a,b)=>(b[1].numVal||0)-(a[1].numVal||0)).map(([name,pr])=>{
+    const d=new Date(pr.date).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+    return`<div class="pr-row"><div><div class="pr-name">${escHtml(name)}</div><div class="pr-sub">${d}</div></div><div style="text-align:right"><div class="pr-val">${pr.val}</div><div class="pr-sub">best set</div></div></div>`;
+  }).join('');
+}
+
+function renderExPicker(){
+  // Collect all unique exercise names that have weight data
+  const names=new Set();
+  workouts.filter(w=>w.type==='strength').forEach(w=>{
+    (w.exercises||[]).forEach(e=>{
+      if(e.name&&(e.sets||[]).some(s=>s.mode!=='bw'&&parseFloat(s.weight)>0))names.add(e.name);
+    });
+  });
+  const picker=document.getElementById('ex-picker');
+  if(!names.size){picker.innerHTML='<div style="color:var(--text3);font-family:\'Barlow Condensed\',sans-serif;font-size:13px;padding-bottom:8px">No weight data yet</div>';return;}
+  picker.innerHTML=[...names].map(n=>`<button class="ex-chip${selectedExercise===n?' active':''}" onclick="selectExercise(${JSON.stringify(n)})">${escHtml(n)}</button>`).join('');
+  if(selectedExercise&&names.has(selectedExercise))renderExTrend(selectedExercise);
+  else document.getElementById('ex-trend-wrap').style.display='none';
+}
+
+function selectExercise(name){
+  selectedExercise=name;
+  document.querySelectorAll('.ex-chip').forEach(c=>c.classList.toggle('active',c.textContent===name));
+  renderExTrend(name);
+}
+
+function renderExTrend(name){
+  // Collect max weight per workout date for this exercise
+  const points=[];
+  [...workouts].reverse().forEach(w=>{
+    const ex=(w.exercises||[]).find(e=>e.name===name);
+    if(!ex)return;
+    const maxWt=Math.max(...(ex.sets||[]).filter(s=>s.mode!=='bw').map(s=>parseFloat(s.weight)||0));
+    if(maxWt>0)points.push({date:new Date(w.date),wt:maxWt});
+  });
+  const wrap=document.getElementById('ex-trend-wrap');
+  if(points.length<2){wrap.style.display='block';document.getElementById('ex-trend-svg').innerHTML='<text x="50%" y="50%" text-anchor="middle" fill="#8892b0" font-size="10" font-family="Barlow Condensed">Need more sessions to show trend</text>';document.getElementById('ex-trend-title').textContent=name+' — Weight Over Time';document.getElementById('ex-trend-labels').innerHTML='';return;}
+  wrap.style.display='block';
+  document.getElementById('ex-trend-title').textContent=name+' — Weight Over Time';
+  const maxWt=Math.max(...points.map(p=>p.wt));
+  const minWt=Math.min(...points.map(p=>p.wt));
+  const pad=4;
+  const W=320,H=90;
+  const xStep=(W-pad*2)/(points.length-1);
+  const yRange=maxWt===minWt?1:maxWt-minWt;
+  const toX=i=>pad+i*xStep;
+  const toY=wt=>H-pad-(((wt-minWt)/yRange)*(H-pad*2));
+  const pathD=points.map((p,i)=>`${i===0?'M':'L'}${toX(i).toFixed(1)},${toY(p.wt).toFixed(1)}`).join(' ');
+  // Area fill
+  const areaD=pathD+` L${toX(points.length-1).toFixed(1)},${H} L${toX(0).toFixed(1)},${H} Z`;
+  const dots=points.map((p,i)=>`<circle cx="${toX(i).toFixed(1)}" cy="${toY(p.wt).toFixed(1)}" r="3" fill="var(--accent)"/>`).join('');
+  // Weight labels on first and last
+  const firstLabel=`<text x="${toX(0).toFixed(1)}" y="${(toY(points[0].wt)-6).toFixed(1)}" text-anchor="middle" fill="var(--accent)" font-size="9" font-family="Barlow Condensed" font-weight="700">${points[0].wt}lbs</text>`;
+  const lastLabel=`<text x="${toX(points.length-1).toFixed(1)}" y="${(toY(points[points.length-1].wt)-6).toFixed(1)}" text-anchor="middle" fill="var(--accent)" font-size="9" font-family="Barlow Condensed" font-weight="700">${points[points.length-1].wt}lbs</text>`;
+  document.getElementById('ex-trend-svg').innerHTML=`
+    <defs><linearGradient id="ag" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#6b8fd4" stop-opacity="0.25"/><stop offset="100%" stop-color="#6b8fd4" stop-opacity="0"/></linearGradient></defs>
+    <path d="${areaD}" fill="url(#ag)"/>
+    <path d="${pathD}" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    ${dots}${firstLabel}${lastLabel}`;
+  // Date labels under chart
+  const show=points.length<=6?points:points.filter((_,i)=>i===0||i===points.length-1||i===Math.floor(points.length/2));
+  document.getElementById('ex-trend-labels').innerHTML=show.map(p=>`<span style="font-family:'Barlow Condensed',sans-serif;font-size:9px;color:var(--text3)">${p.date.toLocaleDateString('en-US',{month:'short',day:'numeric'})}</span>`).join('');
 }
 
 function confirmClear(){

@@ -355,8 +355,7 @@
   <div class="ex-picker" id="ex-picker"></div>
   <div class="chart-wrap" id="ex-trend-wrap" style="display:none">
     <div class="chart-title" id="ex-trend-title"></div>
-    <svg id="ex-trend-svg" viewBox="0 0 320 80" preserveAspectRatio="xMidYMid meet" style="width:100%;height:100px;display:block;overflow:visible"></svg>
-    <div style="display:flex;justify-content:space-between;margin-top:4px" id="ex-trend-labels"></div>
+    <div id="ex-trend-chart"></div>
   </div>
 
   <div class="divider" style="margin-top:12px"></div>
@@ -1310,70 +1309,54 @@ function selectExercise(name){
 }
 
 function renderExTrend(name){
-  try{ _renderExTrend(name); }catch(err){
-    const svg=document.getElementById('ex-trend-svg');
-    const wrap=document.getElementById('ex-trend-wrap');
-    wrap.style.display='block';
-    svg.innerHTML=`<text x="160" y="48" text-anchor="middle" fill="#e84848" font-size="10" font-family="Barlow Condensed,sans-serif">Error: ${escHtml(err.message)}</text>`;
-  }
-}
-function _renderExTrend(name){
   const points=[];
-  // Determine if this exercise is primarily BW
   let isBW=false;
   workouts.filter(w=>w.type==='strength').forEach(w=>{
     const ex=(w.exercises||[]).find(e=>e.name===name);
-    if(ex&&(ex.sets||[]).every(s=>s.mode==='bw'))isBW=true;
+    if(ex&&(ex.sets||[]).length>0&&(ex.sets||[]).every(s=>s.mode==='bw'))isBW=true;
   });
   [...workouts].reverse().forEach(w=>{
     const ex=(w.exercises||[]).find(e=>e.name===name);
     if(!ex)return;
     if(isBW){
-      const maxReps=Math.max(...(ex.sets||[]).filter(s=>s.mode==='bw').map(s=>parseInt(s.reps)||0).filter(v=>v>0));
-      if(maxReps>0)points.push({date:new Date(w.date),wt:maxReps,isBW:true});
+      const vals=(ex.sets||[]).filter(s=>s.mode==='bw').map(s=>parseInt(s.reps)||0).filter(v=>v>0);
+      if(vals.length)points.push({date:new Date(w.date),val:Math.max(...vals)});
     } else {
-      const weights=(ex.sets||[]).filter(s=>s.mode!=='bw').map(s=>parseFloat(s.weight)||0).filter(v=>v>0);
-      if(weights.length)points.push({date:new Date(w.date),wt:Math.max(...weights),isBW:false});
+      const vals=(ex.sets||[]).filter(s=>s.mode!=='bw').map(s=>parseFloat(s.weight)||0).filter(v=>v>0);
+      if(vals.length)points.push({date:new Date(w.date),val:Math.max(...vals)});
     }
   });
-  const wrap=document.getElementById('ex-trend-wrap');
-  const svg=document.getElementById('ex-trend-svg');
-  const labelsEl=document.getElementById('ex-trend-labels');
   const unit=isBW?'reps':'lbs';
-  const trendLabel=isBW?'Reps Over Time':'Weight Over Time';
+  const wrap=document.getElementById('ex-trend-wrap');
+  const chart=document.getElementById('ex-trend-chart');
   wrap.style.display='block';
-  document.getElementById('ex-trend-title').textContent=name+' — '+trendLabel;
+  document.getElementById('ex-trend-title').textContent=name+' — '+(isBW?'Reps':'Weight')+' Over Time';
   if(!points.length){
-    svg.innerHTML='<text x="160" y="48" text-anchor="middle" fill="#8892b0" font-size="11" font-family="Barlow Condensed,sans-serif">No data logged yet</text>';
-    labelsEl.innerHTML='';return;
-  }
-  if(points.length===1){
-    svg.innerHTML=`<text x="160" y="38" text-anchor="middle" fill="#6b8fd4" font-size="16" font-weight="700" font-family="Barlow Condensed,sans-serif">${points[0].wt} ${unit}</text><text x="160" y="58" text-anchor="middle" fill="#8892b0" font-size="10" font-family="Barlow Condensed,sans-serif">Log more sessions to see trend</text>`;
-    labelsEl.innerHTML=`<span style="font-family:'Barlow Condensed',sans-serif;font-size:10px;color:var(--text3)">${points[0].date.toLocaleDateString('en-US',{month:'short',day:'numeric'})}</span>`;
+    chart.innerHTML='<div style="text-align:center;padding:20px;color:var(--text3);font-family:\'Barlow Condensed\',sans-serif;font-size:13px">No data logged yet</div>';
     return;
   }
-  const W=320,H=80,pad=16;
-  const maxWt=Math.max(...points.map(p=>p.wt));
-  const minWt=Math.min(...points.map(p=>p.wt));
-  const yRange=maxWt===minWt?maxWt*0.2||10:maxWt-minWt;
-  const toX=i=>pad+(i/(points.length-1))*(W-pad*2);
-  const toY=wt=>pad+((maxWt-wt)/yRange)*(H-pad*2);
-  const pathD=points.map((p,i)=>`${i===0?'M':'L'}${toX(i).toFixed(1)},${toY(p.wt).toFixed(1)}`).join(' ');
-  const areaD=pathD+` L${toX(points.length-1).toFixed(1)},${H} L${toX(0).toFixed(1)},${H} Z`;
-  const dots=points.map((p,i)=>`<circle cx="${toX(i).toFixed(1)}" cy="${toY(p.wt).toFixed(1)}" r="4" fill="#6b8fd4" stroke="#fff" stroke-width="1.5"/>`).join('');
-  const wtLabels=points.map((p,i)=>{
-    const x=toX(i).toFixed(1);
-    const y=Math.max(toY(p.wt)-8,10).toFixed(1);
-    const anchor=i===0?'start':i===points.length-1?'end':'middle';
-    return`<text x="${x}" y="${y}" text-anchor="${anchor}" fill="#6b8fd4" font-size="9" font-family="Barlow Condensed,sans-serif" font-weight="700">${p.wt}${unit}</text>`;
-  }).filter((_,i)=>i===0||i===points.length-1).join('');
-  svg.innerHTML=`
-    <defs><linearGradient id="ag" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#6b8fd4" stop-opacity="0.18"/><stop offset="100%" stop-color="#6b8fd4" stop-opacity="0"/></linearGradient></defs>
-    <path d="${areaD}" fill="url(#ag)"/>
-    <path d="${pathD}" fill="none" stroke="#6b8fd4" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-    ${dots}${wtLabels}`;
-  const show=points.length<=5?points:points.filter((_,i)=>i===0||i===points.length-1||i===Math.floor(points.length/2));
-  labelsEl.innerHTML=show.map(p=>`<span style="font-family:'Barlow Condensed',sans-serif;font-size:9px;color:var(--text3)">${p.date.toLocaleDateString('en-US',{month:'short',day:'numeric'})}</span>`).join('');
+  if(points.length===1){
+    chart.innerHTML='<div style="text-align:center;padding:12px 0"><div style="font-family:\'Barlow Condensed\',sans-serif;font-size:28px;font-weight:900;color:var(--accent)">'+points[0].val+' '+unit+'</div><div style="font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:var(--text3);margin-top:4px">'+points[0].date.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})+'</div><div style="font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:var(--text3);margin-top:6px">Log more sessions to see trend</div></div>';
+    return;
+  }
+  const maxVal=Math.max(...points.map(p=>p.val));
+  const minVal=Math.min(...points.map(p=>p.val));
+  // Show up to 8 most recent points
+  const show=points.length>8?points.slice(points.length-8):points;
+  const cols=show.map(p=>{
+    const pct=maxVal===minVal?80:Math.round(20+((p.val-minVal)/(maxVal-minVal))*70);
+    const date=p.date.toLocaleDateString('en-US',{month:'numeric',day:'numeric'});
+    return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px">'
+      +'<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:10px;font-weight:900;color:var(--accent)">'+p.val+'</div>'
+      +'<div style="width:100%;display:flex;align-items:flex-end;height:70px">'
+      +'<div style="width:100%;height:'+pct+'%;background:var(--accent);border-radius:4px 4px 0 0;opacity:0.8;min-height:6px"></div>'
+      +'</div>'
+      +'<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:8px;color:var(--text3);text-align:center;line-height:1.2">'+date+'</div>'
+      +'</div>';
+  }).join('');
+  chart.innerHTML='<div style="display:flex;align-items:flex-end;gap:4px;padding:4px 0 0">'+cols+'</div>'
+    +'<div style="display:flex;justify-content:space-between;margin-top:8px;font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:var(--text3)">'
+    +'<span>'+minVal+' '+unit+'</span><span>max: '+maxVal+' '+unit+'</span></div>';
 }
 
 function confirmClear(){

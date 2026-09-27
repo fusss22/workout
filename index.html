@@ -1251,10 +1251,17 @@ function renderPRs(){
       if(!e.name)return;
       (e.sets||[]).forEach(s=>{
         const wt=parseFloat(s.weight);
+        const reps=parseInt(s.reps)||0;
         if(s.mode==='bw'){
-          if(!prMap[e.name]||prMap[e.name].val==='BW')prMap[e.name]={val:'BW',date:w.date};
+          if(!prMap[e.name]||prMap[e.name].type==='bw'){
+            const curReps=prMap[e.name]?.numVal||0;
+            if(reps>curReps)prMap[e.name]={val:reps?reps+' reps':'BW',numVal:reps,type:'bw',date:w.date};
+            else if(!prMap[e.name])prMap[e.name]={val:'BW',numVal:0,type:'bw',date:w.date};
+          }
         } else if(!isNaN(wt)&&wt>0){
-          if(!prMap[e.name]||wt>(prMap[e.name].numVal||0)){prMap[e.name]={val:wt+'lbs',numVal:wt,date:w.date};}
+          if(!prMap[e.name]||prMap[e.name].type==='bw'||wt>(prMap[e.name].numVal||0)){
+            prMap[e.name]={val:wt+'lbs',numVal:wt,type:'weight',date:w.date};
+          }
         }
       });
     });
@@ -1264,7 +1271,8 @@ function renderPRs(){
   if(!entries.length){prEl.innerHTML='<div style="padding:0 16px 8px;color:var(--text3);font-family:\'Barlow Condensed\',sans-serif;font-size:14px">Log strength workouts to see PRs</div>';return;}
   prEl.innerHTML=entries.sort((a,b)=>(b[1].numVal||0)-(a[1].numVal||0)).map(([name,pr])=>{
     const d=new Date(pr.date).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
-    return`<div class="pr-row"><div><div class="pr-name">${escHtml(name)}</div><div class="pr-sub">${d}</div></div><div style="text-align:right"><div class="pr-val">${pr.val}</div><div class="pr-sub">best set</div></div></div>`;
+    const sublabel=pr.type==='bw'?'max reps':'best set';
+    return`<div class="pr-row"><div><div class="pr-name">${escHtml(name)}</div><div class="pr-sub">${d}</div></div><div style="text-align:right"><div class="pr-val">${pr.val}</div><div class="pr-sub">${sublabel}</div></div></div>`;
   }).join('');
 }
 
@@ -1290,41 +1298,50 @@ function selectExercise(name){
 }
 
 function renderExTrend(name){
-  // Collect max weight per workout date for this exercise
   const points=[];
   [...workouts].reverse().forEach(w=>{
     const ex=(w.exercises||[]).find(e=>e.name===name);
     if(!ex)return;
-    const maxWt=Math.max(...(ex.sets||[]).filter(s=>s.mode!=='bw').map(s=>parseFloat(s.weight)||0));
-    if(maxWt>0)points.push({date:new Date(w.date),wt:maxWt});
+    const weights=(ex.sets||[]).filter(s=>s.mode!=='bw').map(s=>parseFloat(s.weight)||0).filter(v=>v>0);
+    if(weights.length)points.push({date:new Date(w.date),wt:Math.max(...weights)});
   });
   const wrap=document.getElementById('ex-trend-wrap');
-  if(points.length<2){wrap.style.display='block';document.getElementById('ex-trend-svg').innerHTML='<text x="50%" y="50%" text-anchor="middle" fill="#8892b0" font-size="10" font-family="Barlow Condensed">Need more sessions to show trend</text>';document.getElementById('ex-trend-title').textContent=name+' — Weight Over Time';document.getElementById('ex-trend-labels').innerHTML='';return;}
+  const svg=document.getElementById('ex-trend-svg');
+  const labelsEl=document.getElementById('ex-trend-labels');
   wrap.style.display='block';
   document.getElementById('ex-trend-title').textContent=name+' — Weight Over Time';
+  if(!points.length){
+    svg.innerHTML='<text x="160" y="48" text-anchor="middle" fill="#8892b0" font-size="11" font-family="Barlow Condensed,sans-serif">No weight data logged yet</text>';
+    labelsEl.innerHTML='';return;
+  }
+  if(points.length===1){
+    svg.innerHTML=`<text x="160" y="38" text-anchor="middle" fill="#6b8fd4" font-size="16" font-weight="700" font-family="Barlow Condensed,sans-serif">${points[0].wt} lbs</text><text x="160" y="58" text-anchor="middle" fill="#8892b0" font-size="10" font-family="Barlow Condensed,sans-serif">Log more sessions to see trend</text>`;
+    labelsEl.innerHTML=`<span style="font-family:'Barlow Condensed',sans-serif;font-size:10px;color:var(--text3)">${points[0].date.toLocaleDateString('en-US',{month:'short',day:'numeric'})}</span>`;
+    return;
+  }
+  const W=320,H=80,pad=16;
   const maxWt=Math.max(...points.map(p=>p.wt));
   const minWt=Math.min(...points.map(p=>p.wt));
-  const pad=4;
-  const W=320,H=90;
-  const xStep=(W-pad*2)/(points.length-1);
-  const yRange=maxWt===minWt?1:maxWt-minWt;
-  const toX=i=>pad+i*xStep;
-  const toY=wt=>H-pad-(((wt-minWt)/yRange)*(H-pad*2));
+  const yRange=maxWt===minWt?maxWt*0.2||10:maxWt-minWt;
+  const toX=i=>pad+(i/(points.length-1))*(W-pad*2);
+  const toY=wt=>pad+((maxWt-wt)/yRange)*(H-pad*2);
   const pathD=points.map((p,i)=>`${i===0?'M':'L'}${toX(i).toFixed(1)},${toY(p.wt).toFixed(1)}`).join(' ');
-  // Area fill
   const areaD=pathD+` L${toX(points.length-1).toFixed(1)},${H} L${toX(0).toFixed(1)},${H} Z`;
-  const dots=points.map((p,i)=>`<circle cx="${toX(i).toFixed(1)}" cy="${toY(p.wt).toFixed(1)}" r="3" fill="var(--accent)"/>`).join('');
-  // Weight labels on first and last
-  const firstLabel=`<text x="${toX(0).toFixed(1)}" y="${(toY(points[0].wt)-6).toFixed(1)}" text-anchor="middle" fill="var(--accent)" font-size="9" font-family="Barlow Condensed" font-weight="700">${points[0].wt}lbs</text>`;
-  const lastLabel=`<text x="${toX(points.length-1).toFixed(1)}" y="${(toY(points[points.length-1].wt)-6).toFixed(1)}" text-anchor="middle" fill="var(--accent)" font-size="9" font-family="Barlow Condensed" font-weight="700">${points[points.length-1].wt}lbs</text>`;
-  document.getElementById('ex-trend-svg').innerHTML=`
-    <defs><linearGradient id="ag" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#6b8fd4" stop-opacity="0.25"/><stop offset="100%" stop-color="#6b8fd4" stop-opacity="0"/></linearGradient></defs>
+  const dots=points.map((p,i)=>`<circle cx="${toX(i).toFixed(1)}" cy="${toY(p.wt).toFixed(1)}" r="4" fill="#6b8fd4" stroke="#fff" stroke-width="1.5"/>`).join('');
+  const wtLabels=points.map((p,i)=>{
+    const x=toX(i).toFixed(1);
+    const y=Math.max(toY(p.wt)-8,10).toFixed(1);
+    const anchor=i===0?'start':i===points.length-1?'end':'middle';
+    return`<text x="${x}" y="${y}" text-anchor="${anchor}" fill="#6b8fd4" font-size="9" font-family="Barlow Condensed,sans-serif" font-weight="700">${p.wt}lbs</text>`;
+  }).filter((_,i)=>i===0||i===points.length-1).join('');
+  svg.setAttribute('viewBox',`0 0 ${W} ${H}`);
+  svg.innerHTML=`
+    <defs><linearGradient id="ag" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#6b8fd4" stop-opacity="0.18"/><stop offset="100%" stop-color="#6b8fd4" stop-opacity="0"/></linearGradient></defs>
     <path d="${areaD}" fill="url(#ag)"/>
-    <path d="${pathD}" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-    ${dots}${firstLabel}${lastLabel}`;
-  // Date labels under chart
-  const show=points.length<=6?points:points.filter((_,i)=>i===0||i===points.length-1||i===Math.floor(points.length/2));
-  document.getElementById('ex-trend-labels').innerHTML=show.map(p=>`<span style="font-family:'Barlow Condensed',sans-serif;font-size:9px;color:var(--text3)">${p.date.toLocaleDateString('en-US',{month:'short',day:'numeric'})}</span>`).join('');
+    <path d="${pathD}" fill="none" stroke="#6b8fd4" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    ${dots}${wtLabels}`;
+  const show=points.length<=5?points:points.filter((_,i)=>i===0||i===points.length-1||i===Math.floor(points.length/2));
+  labelsEl.innerHTML=show.map(p=>`<span style="font-family:'Barlow Condensed',sans-serif;font-size:9px;color:var(--text3)">${p.date.toLocaleDateString('en-US',{month:'short',day:'numeric'})}</span>`).join('');
 }
 
 function confirmClear(){
